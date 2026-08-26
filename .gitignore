@@ -1,0 +1,43 @@
+# Local secrets and credentials
+.env
+.env.*.local
+!.env.example
+.secrets/
+API.txt
+
+# Local binaries
+/yt-dlp.exe
+/automation/config/tts-routing.json
+
+# Python, Node, and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+node_modules/
+.hyperframes/
+
+# Generated workbench state and private source material
+/runtime/
+/.internal/
+/.test-tmp-*/
+01-内容生产/视频工作台/.internal/
+.superpowers/sdd/
+.worktrees/
+
+# Generated workbench outputs
+/video-sample/renders/
+/video-sample/media/generated/
+/video-sample/media/narration.wav
+/video-sample/media/captions.json
+/video-sample/media/caption-qc.json
+/video-sample/reports/
+/video-sample/contact-sheet*.jpg
+/video-sample/.hyperframes/
+/01-内容生产/视频工作台/制作中/*/
+/01-内容生产/视频工作台/制作中/**/renders/
+/01-内容生产/视频工作台/制作中/**/media/generated/
+/01-内容生产/视频工作台/制作中/**/工程/media/narration.wav
+/01-内容生产/视频工作台/制作中/**/工程/media/narration.raw.wav
+/01-内容生产/视频工作台/制作中/**/工程/media/voice_manifest.json
+/01-内容生产/视频工作台/已制作/

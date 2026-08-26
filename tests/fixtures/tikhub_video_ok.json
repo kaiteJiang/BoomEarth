@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "message": "synthetic success",
+  "data": {
+    "video_data": {
+      "aweme_id": "9000000000000000001",
+      "duration_ms": 12345,
+      "desc": "synthetic source title must stay private",
+      "video": {
+        "play_addr": {
+          "url_list": [
+            "https://media.example.invalid/synthetic-private-video.mp4?sig=synthetic-signature"
+          ]
+        }
+      }
+    }
+  }
+}

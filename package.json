@@ -1,0 +1,22 @@
+{
+  "name": "boomearth-v1-sample",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Deterministic local HyperFrames acceptance sample for BoomEarth V1",
+  "boomearthSample": {
+    "prepareUsage": "npm run hf:prepare:sample -- --source-wav <authorized-local-wav>"
+  },
+  "scripts": {
+    "postinstall": "node -e \"const fs=require('fs');fs.mkdirSync('video-sample/node_modules/gsap/dist',{recursive:true});fs.copyFileSync('node_modules/gsap/dist/gsap.min.js','video-sample/node_modules/gsap/dist/gsap.min.js')\"",
+    "hf:doctor": "hyperframes doctor",
+    "hf:lint": "hyperframes lint video-sample",
+    "hf:validate": "hyperframes validate video-sample",
+    "hf:inspect": "hyperframes inspect video-sample --samples 15",
+    "hf:prepare:sample": "python automation/scripts/prepare_video_sample.py",
+    "hf:render:sample": "hyperframes render video-sample -o video-sample/renders/boomearth-v1-sample.mp4 --fps 30 --quality standard --workers 1"
+  },
+  "dependencies": {
+    "gsap": "3.15.0",
+    "hyperframes": "0.7.106"
+  }
+}

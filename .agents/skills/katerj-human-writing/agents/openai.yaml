@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-human-writing
+  short_description: Make Chinese technical copy direct, concrete, and speakable.
+  default_prompt: Use $katerj-human-writing to make this draft sound natural without changing facts.

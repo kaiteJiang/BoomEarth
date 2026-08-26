@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-local-tts
+  short_description: Render locked local IndexTTS2 narration with verified provenance.
+  default_prompt: Use $katerj-local-tts to generate the approved BoomEarth narration.

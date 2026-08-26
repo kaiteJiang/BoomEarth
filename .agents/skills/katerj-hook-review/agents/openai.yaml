@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-hook-review
+  short_description: Test a short-video opening for clarity, value, proof, and speech.
+  default_prompt: Use $katerj-hook-review to diagnose and repair this opening.

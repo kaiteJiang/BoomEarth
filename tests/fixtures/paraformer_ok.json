@@ -1,0 +1,15 @@
+{
+  "status_code": 200,
+  "request_id": "synthetic-request-id-001",
+  "output": {
+    "language": "zh-CN",
+    "sentence": [
+      {
+        "sentence_id": 1,
+        "text": "synthetic private transcript must stay private",
+        "begin_time": 0,
+        "end_time": 1250
+      }
+    ]
+  }
+}

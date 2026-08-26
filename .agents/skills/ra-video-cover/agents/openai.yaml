@@ -1,0 +1,4 @@
+interface:
+  display_name: "视频作品封面"
+  short_description: "为成片生成单张 3:4 巨型透视作品封面并完成质检"
+  default_prompt: "Use $ra-video-cover to generate and QC one 3:4 giant-perspective work cover for this final video."

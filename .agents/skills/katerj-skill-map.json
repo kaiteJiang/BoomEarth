@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "canonical_prefix": "katerj-",
+  "brand_display": "katerJ",
+  "mappings": {
+    "ra-选题": "katerj-topic-planning",
+    "ra-hook": "katerj-video-hook",
+    "ra-video-wash-pipeline": "katerj-video-wash",
+    "ra-video-download": "katerj-source-acquisition",
+    "ra-逐字稿提取skill": "katerj-source-transcription",
+    "ra-洗稿": "katerj-script-rewrite",
+    "ra-人话": "katerj-human-writing",
+    "ra-video-title": "katerj-video-titles",
+    "dbs-ai-check": "katerj-ai-writing-review",
+    "dbs-hook": "katerj-hook-review",
+    "dbs-resonate": "katerj-resonance-review",
+    "ra-video-production-director": "katerj-video-director",
+    "tts-skill": "katerj-local-tts",
+    "ra-audio-to-subtitles": "katerj-audio-subtitles",
+    "skill-captions": "katerj-caption-rendering",
+    "rn-motion-director": "katerj-motion-director",
+    "rn-replica-qc": "katerj-replica-qc",
+    "ian-xiaohei-illustrations": "katerj-xiaohei-illustrations"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Skill 私有导入"
+  short_description: "将授权的 GitHub Skill URL 私有采集并接入洗稿链路"
+  default_prompt: "Use $ra-github-skill-import to privately import this authorized public GitHub Skill URL for interpretation and source-free video rewriting."

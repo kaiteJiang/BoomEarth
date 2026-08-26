@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BoomEarth V1 — 本地十秒样片</title>
+    <style>
+      @font-face { font-family: "Microsoft YaHei"; src: local("Microsoft YaHei"); }
+      @font-face { font-family: "Microsoft JhengHei"; src: local("Microsoft JhengHei"); }
+      @font-face { font-family: "PingFang SC"; src: local("PingFang SC"); }
+      @font-face { font-family: "SimSun"; src: local("SimSun"); }
+      @font-face { font-family: "STSong"; src: local("STSong"); }
+      @font-face { font-family: "Songti SC"; src: local("Songti SC"); }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: #F7F1E7;
+      }
+
+      #boomearth-v1-sample {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #F7F1E7;
+        color: #17130F;
+        font-family: "Microsoft YaHei", "Microsoft JhengHei", "PingFang SC", sans-serif;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #F7F1E7;
+      }
+
+      #scene-one { z-index: 1; }
+      #scene-two { z-index: 2; opacity: 0; }
+
+      .scene-content {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding: 112px 140px 238px;
+        gap: 32px;
+      }
+
+      .topline {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        color: #2C63A3;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+      }
+
+      .topline-rule {
+        width: 92px;
+        height: 4px;
+        background: #2C63A3;
+        transform-origin: left center;
+      }
+
+      .scene-one-layout,
+      .scene-two-layout {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 96px;
+        min-height: 0;
+      }
+
+      .title-column,
+      .proof-column {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 28px;
+        min-width: 0;
+      }
+
+      .eyebrow {
+        color: #C63F2F;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      h1, h2, p { margin: 0; }
+
+      .headline {
+        max-width: 890px;
+        font-family: "SimSun", "STSong", "Songti SC", serif;
+        font-size: 106px;
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 1.13;
+      }
+
+      .supporting-copy {
+        max-width: 720px;
+        color: #443B32;
+        font-size: 34px;
+        font-weight: 400;
+        line-height: 1.65;
+      }
+
+      .process-sketch,
+      .delivery-card {
+        display: flex;
+        flex: 0 0 590px;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 420px;
+        padding: 52px;
+        border: 2px solid #DED4C4;
+        background: #F1E8D9;
+      }
+
+      .process-sketch { gap: 30px; }
+
+      .sketch-label,
+      .card-label {
+        color: #2C63A3;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+      }
+
+      .sketch-line {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        color: #17130F;
+        font-size: 34px;
+        font-weight: 700;
+      }
+
+      .sketch-node {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #E47A35;
+      }
+
+      .sketch-line:nth-of-type(3) .sketch-node { background: #C63F2F; }
+      .sketch-line:nth-of-type(4) .sketch-node { background: #2C63A3; }
+
+      .delivery-card {
+        gap: 24px;
+        border-color: #2C63A3;
+        background: #17130F;
+        color: #F7F1E7;
+      }
+
+      .card-label { color: #E47A35; }
+
+      .card-title {
+        max-width: 430px;
+        font-family: "SimSun", "STSong", "Songti SC", serif;
+        font-size: 70px;
+        font-weight: 700;
+        line-height: 1.22;
+      }
+
+      .card-note {
+        max-width: 390px;
+        color: #DED4C4;
+        font-size: 28px;
+        line-height: 1.55;
+      }
+
+      .accent-disc {
+        position: absolute;
+        width: 410px;
+        height: 410px;
+        border: 2px solid #E47A35;
+        border-radius: 50%;
+        opacity: 0.22;
+      }
+
+      .scene-one-disc { right: -104px; top: 86px; }
+      .scene-two-disc { left: -134px; top: 210px; border-color: #2C63A3; }
+
+      .anchor-dark {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        min-height: 150px;
+        padding: 24px 188px;
+        background: #17130F;
+        border-top: 6px solid #E47A35;
+        color: #F7F1E7;
+      }
+
+      .sample-caption-group {
+        position: absolute;
+        right: 188px;
+        left: 188px;
+        color: #F7F1E7;
+        font-size: 42px;
+        font-weight: 700;
+        line-height: 1.35;
+        opacity: 1;
+        overflow: visible;
+        text-align: center;
+      }
+
+      .sample-caption-group em {
+        color: #E47A35;
+        font-style: normal;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="boomearth-v1-sample"
+      data-composition-id="boomearth-v1-sample"
+      data-width="1920"
+      data-height="1080"
+      data-start="0"
+      data-duration="10"
+      data-track-index="0"
+      data-caption-source="media/captions.json"
+      data-caption-qc="media/caption-qc.json"
+      data-caption-safe-zone="anchor-dark"
+    >
+      <div id="scene-one" class="scene">
+        <div class="accent-disc scene-one-disc" data-layout-ignore></div>
+        <div class="scene-content">
+          <div id="scene-one-topline" class="topline">
+            <span id="scene-one-rule" class="topline-rule"></span>
+            <span>BOOMEARTH / LOCAL FIRST</span>
+          </div>
+          <div class="scene-one-layout">
+            <section class="title-column">
+              <div id="scene-one-eyebrow" class="eyebrow">先收束，再表达</div>
+              <h1 id="scene-one-headline" class="headline">把想法，整理成一条清晰的片子。</h1>
+              <p id="scene-one-copy" class="supporting-copy">不急着堆效果。先让每一个画面、每一句声音，都指向同一个重点。</p>
+            </section>
+            <aside id="scene-one-sketch" class="process-sketch">
+              <div class="sketch-label">10-SECOND SAMPLE</div>
+              <div class="sketch-line"><span class="sketch-node"></span>想法变清楚</div>
+              <div class="sketch-line"><span class="sketch-node"></span>声音有节奏</div>
+              <div class="sketch-line"><span class="sketch-node"></span>画面能交付</div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <div id="scene-two" class="scene">
+        <div class="accent-disc scene-two-disc" data-layout-ignore></div>
+        <div class="scene-content">
+          <div id="scene-two-topline" class="topline">
+            <span id="scene-two-rule" class="topline-rule"></span>
+            <span>DETERMINISTIC / OFFLINE</span>
+          </div>
+          <div class="scene-two-layout">
+            <section class="proof-column">
+              <div id="scene-two-eyebrow" class="eyebrow">短，也要有来处</div>
+              <h2 id="scene-two-headline" class="headline">十秒钟，讲明白一件事。</h2>
+              <p id="scene-two-copy" class="supporting-copy">本地音频、本地字幕、本地渲染。每一步都能复现，也能被认真检查。</p>
+            </section>
+            <aside id="scene-two-card" class="delivery-card">
+              <div class="card-label">DELIVERY CHECK</div>
+              <div class="card-title">音频与字幕，留在同一个节奏里。</div>
+              <div class="card-note">10 秒 · 30 fps · 1920×1080 · local only</div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <div id="caption-anchor" class="anchor-dark" data-caption-safe-zone="anchor-dark"></div>
+
+      <audio
+        id="narration-audio"
+        data-start="0"
+        data-duration="10"
+        data-track-index="1"
+        data-volume="1"
+        src="media/narration.wav"
+      ></audio>
+    </div>
+
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      function loadLocalJson(path) {
+        var request = new XMLHttpRequest();
+        request.open("GET", path, false);
+        request.send(null);
+        if (request.status !== 0 && request.status !== 200) {
+          throw new Error("local sample data unavailable");
+        }
+        return JSON.parse(request.responseText);
+      }
+
+      var captions = loadLocalJson("media/captions.json");
+      var captionQc = loadLocalJson("media/caption-qc.json");
+      if (captionQc.status !== "pass" || captionQc.timing_source !== "synthetic-local-sample") {
+        throw new Error("local sample caption QC unavailable");
+      }
+
+      var captionAnchor = document.getElementById("caption-anchor");
+      var captionGroups = captions.map(function (caption, index) {
+        var element = document.createElement("div");
+        element.id = "caption-group-" + index;
+        element.className = "sample-caption-group";
+        element.textContent = caption.text;
+        captionAnchor.appendChild(element);
+        return { element: element, start: caption.start, end: caption.end };
+      });
+
+      var tl = gsap.timeline({ paused: true });
+      tl.from("#scene-one-topline", { x: -34, opacity: 0, duration: 0.5, ease: "expo.out" }, 0.18);
+      tl.from("#scene-one-rule", { scaleX: 0, duration: 0.36, ease: "power3.out" }, 0.26);
+      tl.from("#scene-one-eyebrow", { y: 32, opacity: 0, duration: 0.45, ease: "power2.out" }, 0.42);
+      tl.from("#scene-one-headline", { y: 56, opacity: 0, duration: 0.72, ease: "power4.out" }, 0.58);
+      tl.from("#scene-one-copy", { x: -24, opacity: 0, duration: 0.58, ease: "sine.out" }, 0.86);
+      tl.from("#scene-one-sketch", { x: 54, opacity: 0, scale: 0.97, duration: 0.68, ease: "back.out(1.15)" }, 0.72);
+
+      tl.to("#scene-one", { filter: "blur(26px)", scale: 1.05, duration: 0.6, ease: "power1.in" }, 4.25);
+      tl.to("#scene-one", { opacity: 0, duration: 0.5, ease: "power1.in" }, 4.85);
+      tl.fromTo("#scene-two", { opacity: 0, filter: "blur(22px)", scale: 0.95 }, { opacity: 1, filter: "blur(22px)", scale: 0.95, duration: 0.3, ease: "power1.inOut" }, 4.95);
+      tl.to("#scene-two", { filter: "blur(0px)", scale: 1, duration: 0.6, ease: "power1.out" }, 5.25);
+
+      tl.from("#scene-two-topline", { x: 34, opacity: 0, duration: 0.5, ease: "expo.out" }, 5.16);
+      tl.from("#scene-two-rule", { scaleX: 0, duration: 0.34, ease: "power3.out" }, 5.24);
+      tl.from("#scene-two-eyebrow", { y: 30, opacity: 0, duration: 0.46, ease: "sine.out" }, 5.38);
+      tl.from("#scene-two-headline", { y: 54, opacity: 0, duration: 0.72, ease: "power4.out" }, 5.52);
+      tl.from("#scene-two-copy", { x: -24, opacity: 0, duration: 0.56, ease: "power2.out" }, 5.82);
+      tl.from("#scene-two-card", { x: 54, opacity: 0, scale: 0.97, duration: 0.66, ease: "back.out(1.1)" }, 5.68);
+
+      captionGroups.forEach(function (group) {
+        tl.from(group.element, { y: 18, opacity: 0, duration: 0.22, ease: "power3.out" }, group.start);
+        tl.to(group.element, { opacity: 0, scale: 0.96, duration: 0.12, ease: "power2.in" }, group.end - 0.12);
+        tl.set(group.element, { opacity: 0 }, group.end);
+      });
+
+      tl.to("#scene-two", { opacity: 0, duration: 0.45, ease: "sine.in" }, 9.55);
+      window.__timelines["boomearth-v1-sample"] = tl;
+    </script>
+  </body>
+</html>

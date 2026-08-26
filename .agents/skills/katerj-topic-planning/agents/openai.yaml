@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-topic-planning
+  short_description: Route one content idea through BoomEarth topic cards and workbenches.
+  default_prompt: Use $katerj-topic-planning to record, deepen, launch, or archive this topic.

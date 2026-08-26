@@ -1,0 +1,6 @@
+interface:
+  display_name: "一键来源成片"
+  short_description: "把授权链接或本地视频自动编排为完整横版成片"
+  default_prompt: "Use $ra-source-to-video to turn this authorized link or local video into a complete BoomEarth video product."
+policy:
+  allow_implicit_invocation: true

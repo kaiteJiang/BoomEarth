@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-script-rewrite
+  short_description: Build a source-free spoken script with a provable opening and reviews.
+  default_prompt: Use $katerj-script-rewrite to turn this material into a reviewed video script.

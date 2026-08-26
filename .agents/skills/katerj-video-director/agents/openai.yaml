@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-video-director
+  short_description: Orchestrate BoomEarth production through render, QC, cover, and archive.
+  default_prompt: Use $katerj-video-director to produce this approved handoff as a finished video.

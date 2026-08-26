@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI 动效导演元 Skill"
+  short_description: "把主题转成非PPT式动效视频的导演控制框架"
+  default_prompt: "Use $rn-motion-director to turn this topic into a motion-first video instead of a PPT-style explainer."

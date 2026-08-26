@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "request_id": "synthetic-request-progressive",
+  "data": {
+    "bvid": "BV1ab411c7De",
+    "cid": 123456789,
+    "quality": 80,
+    "durl": [
+      {
+        "url": "https://progressive.example.invalid/video.mp4",
+        "size": 424242,
+        "length": 15000
+      }
+    ]
+  }
+}

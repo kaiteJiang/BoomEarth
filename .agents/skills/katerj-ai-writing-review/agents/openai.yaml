@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-ai-writing-review
+  short_description: Diagnose exact AI-writing patterns in a Chinese public draft.
+  default_prompt: Use $katerj-ai-writing-review to check this draft before publication.

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "provider": "indextts2-local",
+  "model": "IndexTTS2",
+  "voice_id": "user-indextts2-black-gold-v3",
+  "reference_audio_path": "C:\\BoomEarthLocal\\voice\\reference.wav",
+  "reference_audio_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "provenance_ledger_path": "C:\\BoomEarth\\01-内容生产\\视频工作台\\.internal\\voice\\indextts2-provenance-ledger.json",
+  "interpreter_path": "C:\\BoomEarthLocal\\IndexTTS2\\.venv\\Scripts\\python.exe",
+  "cli_script_path": "C:\\BoomEarthLocal\\IndexTTS2\\indextts\\cli_v2.py",
+  "model_dir": "C:\\BoomEarthLocal\\IndexTTS2\\checkpoints",
+  "playback_speed": 1.12,
+  "fp16": true,
+  "deepspeed": false,
+  "cuda_kernel": false,
+  "accel": false,
+  "torch_compile": false,
+  "used_fallback": false
+}

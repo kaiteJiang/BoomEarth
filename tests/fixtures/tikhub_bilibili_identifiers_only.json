@@ -1,0 +1,8 @@
+{
+  "code": 200,
+  "request_id": "synthetic-request-identifiers",
+  "data": {
+    "bvid": "BV1ab411c7De",
+    "cid": 123456789
+  }
+}

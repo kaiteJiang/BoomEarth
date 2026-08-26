@@ -1,0 +1,4 @@
+interface:
+  display_name: "视频插画 V2"
+  short_description: "为横版视频场景生成可审计的编辑插画以及动态视觉素材资产"
+  default_prompt: "Use $ra-video-illustrations to plan and generate approved illustrations for this video."

@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-video-titles
+  short_description: Create distinct video titles, cover hooks, and platform evidence links.
+  default_prompt: Use $katerj-video-titles to generate evidence-backed title candidates.

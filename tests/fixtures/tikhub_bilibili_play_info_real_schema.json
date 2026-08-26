@@ -1,0 +1,101 @@
+{
+  "cache_message": "synthetic-cache",
+  "cache_message_zh": "synthetic-cache",
+  "cache_url": "https://cache.example.invalid/item",
+  "code": 200,
+  "data": {
+    "accept_description": ["synthetic"],
+    "accept_format": "mp4",
+    "accept_quality": [80, 32],
+    "auto_qn_resp": null,
+    "cur_language": "zh-CN",
+    "cur_production_type": 1,
+    "dash": {
+      "duration": 600,
+      "min_buffer_time": 1.5,
+      "video": [
+        {
+          "id": 80,
+          "base_url": "https://video.example.invalid/1080.m4s",
+          "baseUrl": "https://video.example.invalid/1080.m4s",
+          "backup_url": ["https://video-backup.example.invalid/1080.m4s"],
+          "backupUrl": ["https://video-backup.example.invalid/1080.m4s"],
+          "bandwidth": 2800000,
+          "mime_type": "video/mp4",
+          "mimeType": "video/mp4",
+          "codecs": "avc1.640028",
+          "width": 1920,
+          "height": 1080,
+          "frame_rate": "30",
+          "frameRate": "30"
+        },
+        {
+          "id": 32,
+          "base_url": "https://video.example.invalid/480.m4s",
+          "baseUrl": "https://video.example.invalid/480.m4s",
+          "backup_url": [],
+          "backupUrl": [],
+          "bandwidth": 800000,
+          "mime_type": "video/mp4",
+          "mimeType": "video/mp4",
+          "codecs": "avc1.64001F",
+          "width": 852,
+          "height": 480,
+          "frame_rate": "30",
+          "frameRate": "30"
+        }
+      ],
+      "audio": [
+        {
+          "id": 30280,
+          "base_url": "https://audio.example.invalid/high.m4s",
+          "baseUrl": "https://audio.example.invalid/high.m4s",
+          "backup_url": [],
+          "backupUrl": [],
+          "bandwidth": 192000,
+          "mime_type": "audio/mp4",
+          "mimeType": "audio/mp4",
+          "codecs": "mp4a.40.2"
+        },
+        {
+          "id": 30216,
+          "base_url": "https://audio.example.invalid/standard.m4s",
+          "baseUrl": "https://audio.example.invalid/standard.m4s",
+          "backup_url": [],
+          "backupUrl": [],
+          "bandwidth": 128000,
+          "mime_type": "audio/mp4",
+          "mimeType": "audio/mp4",
+          "codecs": "mp4a.40.2"
+        }
+      ]
+    },
+    "format": "",
+    "from": "local",
+    "high_format": null,
+    "last_play_cid": 0,
+    "last_play_time": 0,
+    "message": "",
+    "quality": 80,
+    "result": "suee",
+    "seek_param": "start",
+    "seek_type": "offset",
+    "support_formats": [],
+    "timelength": 600000,
+    "video_codecid": 7,
+    "view_info": null,
+    "volume": null
+  },
+  "docs": "https://docs.example.invalid/tikhub",
+  "message": "success",
+  "message_zh": "success",
+  "params": {
+    "url": "https://www.example.invalid/private-source"
+  },
+  "request_id": "synthetic-request",
+  "router": "synthetic-router",
+  "support": "synthetic-support",
+  "time": "synthetic-time",
+  "time_stamp": 0,
+  "time_zone": "UTC"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-video-hook
+  short_description: Choose and write an evidence-backed Chinese video opening.
+  default_prompt: Use $katerj-video-hook to write the first spoken lines for this video.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "X 文章私有导入"
+  short_description: "将授权的 X Article 私有采集为可校验的完整文章包"
+  default_prompt: "Use $ra-x-article-import to import this authorized X Article into the private workspace."

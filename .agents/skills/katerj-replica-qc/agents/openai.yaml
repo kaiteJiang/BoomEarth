@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-replica-qc
+  short_description: Prove reference-video fidelity with runtime and decoded-frame evidence.
+  default_prompt: Use $katerj-replica-qc to compare and verify this recreation.

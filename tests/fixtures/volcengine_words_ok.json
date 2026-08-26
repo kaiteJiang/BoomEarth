@@ -1,0 +1,16 @@
+{
+  "result": {
+    "text": "这是 Claude Max 的测试，但是要保留英文空格。",
+    "utterances": [
+      {
+        "words": [
+          {"text": "这是", "start_time": 0, "end_time": 600},
+          {"text": "Claude Max", "start_time": 650, "end_time": 1400},
+          {"text": "的测试", "start_time": 1450, "end_time": 2200},
+          {"text": "但是", "start_time": 2250, "end_time": 2900},
+          {"text": "要保留英文空格", "start_time": 2950, "end_time": 4500}
+        ]
+      }
+    ]
+  }
+}

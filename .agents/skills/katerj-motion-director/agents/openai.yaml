@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-motion-director
+  short_description: Design continuous state-changing motion and reject slideshow plans.
+  default_prompt: Use $katerj-motion-director to build the motion language for this video.

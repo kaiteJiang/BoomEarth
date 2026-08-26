@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-source-transcription
+  short_description: Produce a private Paraformer transcript from a locked source WAV.
+  default_prompt: Use $katerj-source-transcription to transcribe this private source artifact.

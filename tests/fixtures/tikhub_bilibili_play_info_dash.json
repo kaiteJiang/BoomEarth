@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "synthetic-request-dash",
+  "data": {
+    "bvid": "BV1ab411c7De",
+    "cid": 123456789,
+    "quality": 80,
+    "dash": {
+      "video": [
+        {
+          "id": 80,
+          "baseUrl": "https://video.example.invalid/main.m4s",
+          "backupUrl": ["https://backup.example.invalid/main.m4s"],
+          "bandwidth": 2500000,
+          "mimeType": "video/mp4",
+          "codecs": "avc1.640028",
+          "width": 1920,
+          "height": 1080,
+          "frameRate": "30"
+        }
+      ],
+      "audio": [
+        {
+          "id": 30280,
+          "baseUrl": "https://audio.example.invalid/main.m4s",
+          "backupUrl": [],
+          "bandwidth": 192000,
+          "mimeType": "audio/mp4",
+          "codecs": "mp4a.40.2"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>BoomEarth V2 production render</title>
+    <style>
+      @font-face { font-family: 'Microsoft YaHei'; src: local('Microsoft YaHei'); }
+      @font-face { font-family: 'Microsoft JhengHei'; src: local('Microsoft JhengHei'); }
+      @font-face { font-family: 'PingFang SC'; src: local('PingFang SC'); }
+      @font-face { font-family: 'SimSun'; src: local('SimSun'); }
+      @font-face { font-family: 'STSong'; src: local('STSong'); }
+      @font-face { font-family: 'Songti SC'; src: local('Songti SC'); }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #F7F1E7; }
+      [data-composition-id="boomearth-v2-production"] { position: relative; width: 1920px; height: 1080px; overflow: hidden; color: #17130F; font-family: Microsoft YaHei, Microsoft JhengHei, PingFang SC, sans-serif; }
+      .scene { position: absolute; inset: 0; display: flex; min-height: 0; padding: 112px 140px 196px; background: #F7F1E7; }
+      .scene-two { background: #DED4C4; opacity: 0; }
+      .scene-content { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 28px; max-width: 1160px; }
+      .eyebrow { color: #2C63A3; font-size: 30px; font-weight: 700; letter-spacing: .08em; }
+      .headline { margin: 0; font-family: SimSun, STSong, Songti SC, serif; font-size: 96px; font-weight: 600; letter-spacing: -.04em; line-height: 1.12; }
+      .copy { margin: 0; max-width: 1000px; font-size: 34px; line-height: 1.55; }
+      .anchor-dark { position: absolute; right: 0; bottom: 0; left: 0; z-index: 2; display: flex; align-items: center; min-height: 150px; padding: 28px 48px; overflow: visible; background: #17130F; color: #F7F1E7; }
+      .caption-group { position: absolute; max-width: 1720px; font-size: 42px; font-weight: 700; line-height: 1.35; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="boomearth-v2-production" data-composition-id="boomearth-v2-production" data-width="1920" data-height="1080" data-start="0" data-duration="__DURATION_SECONDS__" data-track-index="0" data-caption-source="media/captions.json" data-caption-qc="media/caption-qc.json" data-caption-safe-zone="anchor-dark">
+      <section id="scene-one" class="scene" data-scene-one-start="0.000000" data-scene-one-end="__SCENE_SPLIT_SECONDS__">
+        <div class="scene-content">
+          <div id="scene-one-eyebrow" class="eyebrow">BOOMEARTH / LOCAL PRODUCTION</div>
+          <h1 id="scene-one-headline" class="headline">声音和字幕，保持同一条时间线。</h1>
+          <p id="scene-one-copy" class="copy">离线渲染快照只使用已经核验的本地素材。</p>
+        </div>
+      </section>
+      <section id="scene-two" class="scene scene-two" data-scene-two-start="__SCENE_SPLIT_SECONDS__" data-scene-two-end="__DURATION_SECONDS__">
+        <div class="scene-content">
+          <div id="scene-two-eyebrow" class="eyebrow">WORD TIMESTAMPS / ANCHOR DARK</div>
+          <h2 id="scene-two-headline" class="headline">每一个字幕提示，都保留原始落点。</h2>
+          <p id="scene-two-copy" class="copy">时长来自已提交的旁白 WAV；字幕提示不会被重新计算。</p>
+        </div>
+      </section>
+      <div id="caption-anchor" class="anchor-dark" data-caption-safe-zone="anchor-dark"></div>
+      <audio id="narration-audio" data-start="0" data-duration="__DURATION_SECONDS__" data-track-index="1" data-volume="1" src="media/narration.wav"></audio>
+    </div>
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      function loadLocalJson(path) {
+        var request = new XMLHttpRequest();
+        request.open("GET", path, false);
+        request.send(null);
+        if (request.status !== 0 && request.status !== 200) { throw new Error("local production data unavailable"); }
+        return JSON.parse(request.responseText);
+      }
+      var captions = loadLocalJson("media/captions.json");
+      var captionQc = loadLocalJson("media/caption-qc.json");
+      if (captionQc.status !== "pass" || captionQc.timing_source !== "volcengine-word-timestamps") { throw new Error("production caption QC unavailable"); }
+      var captionAnchor = document.getElementById("caption-anchor");
+      var captionGroups = captions.map(function (caption, index) {
+        var element = document.createElement("div");
+        element.id = "caption-group-" + index;
+        element.className = "caption-group";
+        element.textContent = caption.text;
+        captionAnchor.appendChild(element);
+        return { element: element, start: caption.start, end: caption.end };
+      });
+      var split = __SCENE_SPLIT_SECONDS__;
+      var duration = __DURATION_SECONDS__;
+      var transitionDuration = Math.min(0.36, duration / 4);
+      var transitionStart = Math.max(0, split - transitionDuration);
+      var sceneFadeDuration = transitionDuration / 2;
+      var finalFadeDuration = Math.min(0.24, duration / 4);
+      var tl = gsap.timeline({ paused: true });
+      tl.from("#scene-one-eyebrow", { y: 24, opacity: 0, duration: 0.35, ease: "power2.out" }, 0.12);
+      tl.from("#scene-one-headline", { x: -42, opacity: 0, duration: 0.58, ease: "expo.out" }, 0.24);
+      tl.from("#scene-one-copy", { y: 22, opacity: 0, duration: 0.42, ease: "sine.out" }, 0.44);
+      tl.to("#scene-one", { opacity: 0, filter: "blur(22px)", scale: 1.02, duration: sceneFadeDuration, ease: "sine.in" }, transitionStart);
+      tl.to("#scene-two", { opacity: 1, filter: "blur(0px)", duration: sceneFadeDuration, ease: "sine.out" }, transitionStart + sceneFadeDuration);
+      tl.from("#scene-two-eyebrow", { x: 28, opacity: 0, duration: Math.min(0.34, duration / 4), ease: "power3.out" }, Math.min(duration, split + 0.08));
+      tl.from("#scene-two-headline", { y: 42, opacity: 0, duration: Math.min(0.56, duration / 3), ease: "power4.out" }, Math.min(duration, split + 0.18));
+      tl.from("#scene-two-copy", { x: 24, opacity: 0, duration: Math.min(0.4, duration / 4), ease: "sine.out" }, Math.min(duration, split + 0.4));
+      captionGroups.forEach(function (group) {
+        tl.set(group.element, { opacity: 1 }, group.start);
+        tl.set(group.element, { opacity: 0 }, group.end + 0.0001);
+      });
+      tl.to("#scene-two", { opacity: 0, duration: finalFadeDuration, ease: "sine.in" }, duration - finalFadeDuration);
+      window.__timelines["boomearth-v2-production"] = tl;
+    </script>
+  </body>
+</html>

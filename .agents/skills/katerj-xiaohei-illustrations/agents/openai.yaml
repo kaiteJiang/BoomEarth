@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-xiaohei-illustrations
+  short_description: Generate white-first semantic black-character scene illustrations.
+  default_prompt: Use $katerj-xiaohei-illustrations to plan or create images for these scenes.

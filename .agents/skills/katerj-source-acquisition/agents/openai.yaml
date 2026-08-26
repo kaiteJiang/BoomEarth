@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-source-acquisition
+  short_description: Capture authorized media into a private hash-locked work item.
+  default_prompt: Use $katerj-source-acquisition to ingest this authorized media source.

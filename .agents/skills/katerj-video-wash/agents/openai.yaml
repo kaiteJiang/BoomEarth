@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-video-wash
+  short_description: Turn authorized source media into a private-reviewed source-free handoff.
+  default_prompt: Use $katerj-video-wash to prepare this authorized source for production.

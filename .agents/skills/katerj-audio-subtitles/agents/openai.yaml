@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-audio-subtitles
+  short_description: Build six final-audio caption artifacts from real word timestamps.
+  default_prompt: Use $katerj-audio-subtitles to generate production subtitles from this locked WAV.

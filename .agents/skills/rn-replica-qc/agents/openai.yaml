@@ -1,0 +1,4 @@
+interface:
+  display_name: "参考视频复刻全帧质检"
+  short_description: "参考视频逐帧复刻、运行时回归、正式成片解码对齐与组件沉淀"
+  default_prompt: "Use $rn-replica-qc to classify fidelity, align the exact reference segment, pass asset/runtime/delivery frame gates, and register reusable motion separately from exact replay."

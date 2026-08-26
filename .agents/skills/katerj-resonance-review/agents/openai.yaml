@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-resonance-review
+  short_description: Find the one audience mechanism a draft should organize around.
+  default_prompt: Use $katerj-resonance-review to diagnose this script's audience connection.

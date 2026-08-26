@@ -1,0 +1,4 @@
+interface:
+  display_name: katerj-caption-rendering
+  short_description: Preview, render, and validate fixed-anchor production captions.
+  default_prompt: Use $katerj-caption-rendering to style and validate these canonical captions.

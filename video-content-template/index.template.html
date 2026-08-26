@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>BoomEarth content production</title>
+    <style>
+      @font-face { font-family: "Microsoft YaHei"; src: local("Microsoft YaHei"); }
+      @font-face { font-family: "PingFang SC"; src: local("PingFang SC"); }
+      @font-face { font-family: "SimSun"; src: local("SimSun"); }
+      @font-face { font-family: "STSong"; src: local("STSong"); }
+      @font-face { font-family: "STHeiti Medium"; src: local("STHeiti Medium"); }
+      * { box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; margin: 0; overflow: hidden; background: #f7f1e7; }
+      body { color: #17130f; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+      #boomearth-content-production { position: relative; isolation: isolate; width: 1920px; height: 1080px; overflow: hidden; background: #f7f1e7; }
+      .perspective-grid-video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+      .scene { position: absolute; inset: 0; z-index: 1; opacity: 0; background: linear-gradient(90deg, rgba(247, 241, 231, .98) 0%, rgba(247, 241, 231, .94) 43%, rgba(247, 241, 231, .76) 72%, rgba(247, 241, 231, .62) 100%); }
+      .scene:first-child { opacity: 1; }
+      .chapter { position: absolute; left: 104px; top: 92px; font-size: 28px; font-weight: 800; letter-spacing: .08em; color: #2c63a3; }
+      .progress { margin-left: 18px; color: #17130f; }
+      .motion-v2 > .progress { position: absolute; right: 104px; top: 92px; margin-left: 0; font-size: 28px; font-weight: 800; letter-spacing: .08em; }
+      .motion-v3 > .progress { position: absolute; right: 104px; top: 92px; margin-left: 0; font-size: 28px; font-weight: 800; letter-spacing: .08em; }
+      .title { position: absolute; left: 104px; top: 140px; width: 780px; margin: 0; font-family: SimSun, STSong, serif; font-size: 82px; line-height: 1.08; letter-spacing: -.035em; }
+      .title-line, .subtitle-line { display: block; }
+      .subtitle { position: absolute; left: 108px; top: 340px; width: 740px; margin: 0; font-size: 31px; line-height: 1.35; color: #51483e; }
+      .note-card { position: absolute; left: 104px; top: 424px; width: 730px; min-height: 286px; padding: 34px 38px; border: 3px solid #17130f; border-radius: 28px; background: #fffaf1; box-shadow: 12px 12px 0 #d8cbb8; }
+      .kicker { margin-bottom: 22px; font-size: 27px; font-weight: 900; color: #2c63a3; }
+      .note-row { display: grid; grid-template-columns: 112px 1fr; gap: 18px; margin: 14px 0; font-size: 27px; line-height: 1.35; }
+      .note-label { font-weight: 900; }
+      .visual-frame { position: absolute; right: 72px; top: 264px; width: 972px; height: 547px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      .visual-frame img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .visual-system-v3 .visual-frame { border: 3px solid rgba(23, 19, 15, .92); border-radius: 28px; background: rgba(255, 252, 245, .94); box-shadow: 12px 12px 0 rgba(216, 203, 184, .8); }
+      .visual-system-v3 .visual-frame img { width: 100%; height: 100%; object-fit: cover; }
+      .visual-overlay-labels { position: absolute; inset: 0; bottom: 150px; pointer-events: none; }
+      .visual-overlay-label { position: relative; display: inline-flex; margin: 26px 0 0 26px; padding: 10px 18px; border: 2px solid #17130f; border-radius: 999px; background: #fffaf1; box-shadow: 5px 5px 0 #d8cbb8; font-size: 25px; font-weight: 900; }
+      .visual-overlay-label:nth-child(2n) { background: #d9e8f5; }
+      .visual-overlay-label:nth-child(3n) { background: #f2dfca; }
+      .type-led-layout { position: relative; width: 100%; height: 100%; padding: 64px 72px 170px; display: grid; align-content: center; gap: 34px; }
+      .type-led-label { position: relative; z-index: 2; display: flex; min-height: 112px; align-items: center; justify-content: center; padding: 22px 34px; border: 3px solid #17130f; border-radius: 24px; background: #fffaf1; box-shadow: 8px 8px 0 #d8cbb8; font-family: SimSun, STSong, serif; font-size: 46px; font-weight: 900; text-align: center; }
+      .type-led-comparison { grid-template-columns: 1fr 1fr; }
+      .type-led-flow { grid-template-columns: repeat(3, 1fr); }
+      .type-led-stack { grid-template-columns: 1fr; }
+      .type-led-quadrant { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+      .type-led-connector { position: absolute; z-index: 1; display: block; pointer-events: none; }
+      .type-led-connector[data-connector="path"] { left: 18%; right: 18%; top: 50%; border-top: 5px dashed #2c63a3; }
+      .type-led-connector[data-connector="divider"] { left: 50%; top: 22%; bottom: 30%; border-left: 4px solid #17130f; }
+      .type-led-connector[data-connector="underline"] { left: 18%; right: 18%; bottom: 184px; border-bottom: 7px solid #d4804d; border-radius: 50%; }
+      .type-led-connector[data-connector="arrow"] { right: 17%; top: 45%; width: 24px; height: 24px; border-top: 5px solid #2c63a3; border-right: 5px solid #2c63a3; transform: rotate(45deg); }
+      .visual-placeholder { font-size: 26px; color: #766b5f; }
+      .layout-long-title .title { font-size: 76px; }
+      .layout-wide-visual .visual-frame { width: 1040px; right: 40px; }
+      .layout-close .note-card { border-color: #2c63a3; }
+      .anchor-dark { position: absolute; inset: 0; z-index: 20; pointer-events: none; color: rgb(252, 252, 249); }
+      .caption { position: absolute; left: 0; right: 0; bottom: 96px; display: flex; justify-content: center; padding: 0 96px; text-align: center; opacity: 0; }
+      .caption-panel { display: inline-block; max-width: 1500px; padding: 22px 22px; border-radius: 16px; background: rgba(45, 51, 50, .835); font-family: "STHeiti Medium", "Microsoft YaHei", sans-serif; font-size: 56px; font-weight: 500; line-height: 1.15; overflow-wrap: break-word; }
+    </style>
+  </head>
+  <body>
+    <main id="boomearth-content-production" data-composition-id="boomearth-content-production" data-width="1920" data-height="1080" data-start="0" data-duration="__DURATION_SECONDS__">
+      __BACKGROUND_BLOCK__
+      __SCENE_BLOCKS__
+      <div class="anchor-dark" data-caption-safe-zone="anchor-dark">__CAPTION_BLOCKS__</div>
+      <audio id="narration-audio" src="media/narration.wav" data-start="0"></audio>
+    </main>
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script>__TIMELINE_SCRIPT__</script>
+  </body>
+</html>
