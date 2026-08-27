@@ -356,3 +356,6 @@ TASK15 的实现和默认测试在第一个真实请求之前停止。不得把�
 测试注入的 settings loader、probe 与 factory 是受信任的本地 test seam；生产默认 CLI 不会转发这些 callback 的输出。默认 API adapter 仍有界截获并丢弃既有 smoke stdout/stderr。
 
 未来如需 HeyGen，必须另行建立显式 OAuth/计费和人工批准流程；HeyGen 凭据、调用和数字人路径都不属于 V1 交接契约或默认命令。
+
+##特此感谢
+ 项目能快速成型 借鉴了卡神一些X上的文章思路，以及 雪踏乌云大佬 苍何大佬 等一众大佬开源SKILL上的灵感。再次感叹 AI时代站在巨人的肩膀上有了真正身临其境的体验。
