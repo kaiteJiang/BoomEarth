@@ -72,6 +72,37 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def test_xiaohei_render_rejects_scene_without_local_text_layer(project: Path) -> None:
+    scene = SimpleNamespace(
+        id="scene-01",
+        chapter="问题",
+        progress="01 / 01",
+        title_lines=("只修故障",),
+        subtitle_lines=(),
+        notes=(),
+        kicker="断点续跑",
+        visual_mode=None,
+        overlay_labels=(),
+        layout_variant="standard",
+    )
+    plan = SimpleNamespace(
+        scenes=(scene,), visual_system="xiaohei-white-first-v1"
+    )
+    timeline = SimpleNamespace(
+        scenes=(SimpleNamespace(start=0.0, end=3.0),)
+    )
+
+    with pytest.raises(
+        ContentRenderProjectError, match="xiaohei text layer is required"
+    ):
+        _scene_html(
+            plan,
+            timeline,
+            {"scene-01": "scene-01.png"},
+            xiaohei_motion=True,
+        )
+
+
 def _set_handoff_visual(root: Path, target: str) -> None:
     resolved = resolve_visual_style(target)
     path = root / "交接稿.md"

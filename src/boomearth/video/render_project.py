@@ -240,6 +240,8 @@ def _scene_html(
             else "xiaohei-illustrations"
         )
         labels = tuple(getattr(scene, "overlay_labels", ()))
+        if xiaohei_motion and not labels:
+            raise ContentRenderProjectError("xiaohei text layer is required")
         visual_mode = getattr(scene, "visual_mode", None)
         if motion_v3 and visual_mode == "type-led":
             contract = type_led_contracts.get(scene.id)

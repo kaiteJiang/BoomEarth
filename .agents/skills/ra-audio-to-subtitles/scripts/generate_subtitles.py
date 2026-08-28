@@ -442,7 +442,7 @@ def _display_caption_text(text: str) -> str:
 
 
 def _split_long_caption(text: str, max_chars: int) -> list[str]:
-    """Apply the oral-linebreak 8-16 soft target at safe semantic cuts."""
+    """Apply the oral-linebreak hard limit at safe semantic cuts."""
 
     pending = text.strip()
     chunks: list[str] = []
@@ -964,8 +964,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-chars",
         type=int,
-        default=20,
-        help="maximum reading units for one semantic single-line caption",
+        default=14,
+        help="hard review limit for one semantic single-line caption",
     )
     parser.add_argument("--min-coverage", type=float, default=0.90)
     parser.add_argument("--doctor", action="store_true")

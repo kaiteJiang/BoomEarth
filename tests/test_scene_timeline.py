@@ -62,8 +62,9 @@ def _candidate(project: Path) -> dict[str, object]:
                 "subtitle_lines": ["从底层事实出发"],
                 "kicker": "关键点",
                 "notes": [{"label": "结论", "text": "先验证再行动"}],
-                "visual_intent": "用无文字的小黑人物表现具体动作",
+                "visual_intent": "用小黑人物和本地短标签表现具体动作",
                 "visual_asset": f"工程/assets/xiaohei-illustrations/scene-{index:02d}.png",
+                "overlay_labels": ["动作主体", "关键结果"],
                 "layout_variant": variants[index - 1],
             }
             for index in range(1, 5)

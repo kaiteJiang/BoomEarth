@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![Local First](https://img.shields.io/badge/Architecture-Local_First-111827)](#隐私不是补丁而是系统边界)
-[![Skills](https://img.shields.io/badge/Project_Skills-41-7C3AED)](#skill-组成)
+[![Skills](https://img.shields.io/badge/Project_Skills-42-7C3AED)](#skill-组成)
 [![Video](https://img.shields.io/badge/Output-1080P%20%2F%2030FPS-E11D48)](#后端多样式生成)
 [![License](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE)
 
@@ -125,7 +125,7 @@ BoomEarth 同时交付旁白、字幕六件套、插画素材、数字人 master
 
 ## Skill 组成
 
-当前仓库包含 **41 个项目级 Skill 入口**，其中 **18 个 `katerj-*` Skill 是生产真源**；历史 `ra-*`、`rn-*` 等名称保留为兼容桥，旧流程不需要一次性重写。
+当前仓库包含 **42 个项目级 Skill 入口**，其中 **19 个 `katerj-*` Skill 是生产真源**；历史 `ra-*`、`rn-*` 等名称保留为兼容桥，旧流程不需要一次性重写。
 
 | 层级 | 代表 Skill | 职责 |
 | --- | --- | --- |
@@ -133,7 +133,7 @@ BoomEarth 同时交付旁白、字幕六件套、插画素材、数字人 master
 | 来源层 | `katerj-source-acquisition`、`katerj-source-transcription`、`ra-x-article-import`、`ra-github-skill-import` | 授权采集、媒体校验、来源转写和私有快照 |
 | 文案层 | `katerj-script-rewrite`、`katerj-human-writing`、`katerj-video-hook`、`katerj-hook-review`、`katerj-resonance-review` | 深入浅出改写、开场钩子、去 AI 味和共鸣检查 |
 | 视觉层 | `katerj-xiaohei-illustrations`、`ra-video-illustrations`、`katerj-motion-director` | 场景素材、风格约束、组件级动作和语义 cue |
-| 声音字幕 | `katerj-local-tts`、`katerj-audio-subtitles`、`katerj-caption-rendering` | 本地配音、最终音频词级字幕和单行渲染 |
+| 声音字幕 | `katerj-local-tts`、`katerj-oral-linebreaks`、`katerj-audio-subtitles`、`katerj-caption-rendering` | 本地配音、闭合断句、最终音频词级字幕和单行渲染 |
 | 质量交付 | `katerj-replica-qc`、`katerj-ai-writing-review`、`ra-video-cover` | 视觉复验、文案诊断、封面与最终交付检查 |
 
 Skill 负责理解任务和阶段路由，`automation/scripts` 负责确定性执行，`src/boomearth` 负责合同、安全和核心能力。三者分开，才能让流程既有创造力，又不会失控。
@@ -181,7 +181,7 @@ IndexTTS2 最终旁白锁定
 
 ```text
 BoomEarth/
-├─ .agents/skills/              # 41 个项目级 Skill 与兼容桥
+├─ .agents/skills/              # 42 个项目级 Skill 与兼容桥
 ├─ automation/
 │  ├─ config/                   # 本地路由与非敏感配置
 │  └─ scripts/                  # 采集、编译、渲染、QC、归档脚本

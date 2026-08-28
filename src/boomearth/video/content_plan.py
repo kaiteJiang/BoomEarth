@@ -58,6 +58,7 @@ _SCENE_REQUIRED_FIELDS = {
     "layout_variant",
 }
 _SCENE_OPTIONAL_FIELDS = {"no_visual_reason", "reuse_reason"}
+_V1_SCENE_FIELDS = {"overlay_labels"}
 _V2_SCENE_FIELDS = {"visual_type", "visual_style"}
 _V3_SCENE_FIELDS = _V2_SCENE_FIELDS | {
     "visual_mode",
@@ -627,6 +628,7 @@ def validate_content_plan(
     handoff_segments: tuple[HandoffSegment, ...],
     handoff_visual: HandoffVisualContract,
     narration_segments: tuple[str, ...],
+    require_xiaohei_text_layer: bool = False,
 ) -> ContentPlan:
     """Validate an exact P1 plan against its public text and local asset contract."""
 
@@ -713,11 +715,16 @@ def validate_content_plan(
             if is_v3
             else _V2_SCENE_FIELDS
             if is_v2
+            else _V1_SCENE_FIELDS
+        )
+        required_version_fields = (
+            version_fields
+            if is_v2 or is_v3 or is_v4 or require_xiaohei_text_layer
             else set()
         )
         if (
             not isinstance(value, dict)
-            or not (_SCENE_REQUIRED_FIELDS | version_fields) <= set(value)
+            or not (_SCENE_REQUIRED_FIELDS | required_version_fields) <= set(value)
             or set(value)
             - (_SCENE_REQUIRED_FIELDS | _SCENE_OPTIONAL_FIELDS | version_fields)
         ):
@@ -825,6 +832,12 @@ def validate_content_plan(
                     semantic_subjects=semantic_subjects,
                     forbidden_metaphors=forbidden_metaphors,
                 )
+        elif not is_v2:
+            overlay_labels = _overlay_labels(
+                value.get("overlay_labels", []), maximum_count=4
+            )
+            if require_xiaohei_text_layer and not overlay_labels:
+                raise ContentPlanError("xiaohei text layer is required")
         if (is_v3 or is_v4) and visual_mode == "type-led":
             if value.get("no_visual_reason") is not None:
                 raise ContentPlanError("no-visual exception is invalid")
@@ -939,6 +952,8 @@ def _plan_dict(plan: ContentPlan) -> dict[str, object]:
                 scene.required_visual_evidence
             )
             value["forbidden_metaphors"] = list(scene.forbidden_metaphors)
+            value["overlay_labels"] = list(scene.overlay_labels)
+        elif plan.schema_version == 1:
             value["overlay_labels"] = list(scene.overlay_labels)
         if scene.theme_structure:
             value["theme_structure"] = list(scene.theme_structure)
@@ -1062,6 +1077,7 @@ def compile_content_plan(
         handoff_segments=handoff_segments,
         handoff_visual=handoff_visual,
         narration_segments=narration_segments,
+        require_xiaohei_text_layer=True,
     )
     snapshots = (
         candidate_snapshot,

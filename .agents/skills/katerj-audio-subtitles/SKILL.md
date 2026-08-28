@@ -15,12 +15,12 @@ Publish exactly six caption artifacts whose timing comes from one ASR request ag
 2. Create an immutable Volcengine flash Base64 plan for one request using resource `volc.bigasr.auc_turbo`.
 3. Run the approved request with zero retry, redirect, TOS upload, polling, or provider fallback.
 4. Align provider words to the original narration text; provider text supplies timing, not display spelling.
-5. Group punctuation-free semantic phrases using real word boundaries. Keep product names intact and connectors with their clause.
+5. Apply `katerj-oral-linebreaks` to group punctuation-free, closed semantic phrases using real word boundaries. Prefer 6-12 Chinese characters, enforce the 14-character review limit, keep protected names intact, and reject dangling or orphaned breaks.
 6. Publish one no-clobber directory containing `asr-result.json`, `captions_words.json`, `captions.json`, `captions.srt`, `captions.vtt`, and `caption-qc.json`. An existing destination is a hard stop, and a failed build keeps the complete diagnostic in the private attempt directory without merging partial files.
 
 ## Caption rules
 
-Use one single-line cue at a time, at least one frame apart. Reject overlap, fragments shorter than 0.5 seconds, split connectors, excessive reading speed, or alignment coverage below 0.90.
+Use one single-line cue at a time, at least one frame apart. Reject overlap, fragments shorter than 0.5 seconds, split connectors, dangling or orphaned syntax, lines above the 14-character review limit, excessive reading speed, or alignment coverage below 0.90.
 
 ## Acceptance
 

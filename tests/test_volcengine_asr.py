@@ -187,6 +187,17 @@ def test_caption_grouping_uses_oral_linebreak_soft_target() -> None:
     assert all(not any(mark in text for mark in "，、；：。！？") for text in captions)
 
 
+def test_caption_cli_defaults_to_short_subtitle_hard_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Would fail if production silently returned to the old 20-unit captions."""
+
+    module = _load_subtitle_module()
+    monkeypatch.setattr(sys, "argv", ["generate_subtitles.py"])
+
+    assert module.parse_args().max_chars == 14
+
+
 def test_caption_grouping_keeps_terms_connectors_and_negation_units_intact() -> None:
     module = _load_subtitle_module()
 

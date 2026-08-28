@@ -39,6 +39,7 @@ Exactly these 18 project-level skill directories are installed under `.agents/sk
 
 - `ra-x-article-import`: BoomEarth 私有 X Article 采集路由。
 - `ra-github-skill-import`: BoomEarth 私有 GitHub Skill URL 解读与洗稿路由；离线合同已实现，目标仓库一次获批真实采集状态为 `REAL_ACCEPTANCE_PASS`。
+- `katerj-oral-linebreaks`: BoomEarth 自有中文口播与单行字幕闭合断句规则，提供 14 字硬复核和本地检查器。
 
 这些目录由 BoomEarth 独立维护，不计入上面的 18 个固定上游安装项，也不改变其历史字节一致性口径。
 

@@ -74,8 +74,9 @@ def _scene(index: int) -> dict[str, object]:
         "subtitle_lines": ["从底层事实出发"],
         "kicker": "关键点",
         "notes": [{"label": "结论", "text": "先验证再行动"}],
-        "visual_intent": "用无文字的小黑人物表现具体动作",
+        "visual_intent": "用小黑人物和本地短标签表现具体动作",
         "visual_asset": f"工程/assets/xiaohei-illustrations/scene-{index:02d}.png",
+        "overlay_labels": ["动作主体", "关键结果"],
         "layout_variant": ("standard", "long-title", "wide-visual", "close")[index - 1],
     }
 
@@ -104,6 +105,7 @@ def valid_v2_candidate(project: Path) -> dict[str, object]:
     for index, scene in enumerate(candidate["scenes"], 1):  # type: ignore[union-attr]
         path = editorial / f"scene-{index:02d}.png"
         path.write_bytes(PNG)
+        scene.pop("overlay_labels")
         scene["visual_asset"] = f"工程/assets/editorial-illustrations/scene-{index:02d}.png"
         scene["visual_type"] = types[index - 1]
         scene["visual_style"] = styles[index - 1]
@@ -341,6 +343,17 @@ def test_compile_publishes_one_deterministic_hash_bound_plan(project: Path) -> N
         "close",
     )
     assert formal.read_bytes().endswith(b"\n")
+
+
+def test_xiaohei_plan_preserves_required_local_text_layer_labels(project: Path) -> None:
+    candidate = valid_candidate(project)
+    candidate["scenes"][0]["overlay_labels"] = ["已完成成果", "末端报错"]
+
+    compiled = compile_fixture(project, candidate)
+
+    assert compiled.plan.scenes[0].overlay_labels == ("已完成成果", "末端报错")
+    stored = json.loads(compiled.path.read_text(encoding="utf-8"))
+    assert stored["scenes"][0]["overlay_labels"] == ["已完成成果", "末端报错"]
 
 
 def test_content_plan_v2_accepts_editorial_fields_without_changing_v1(project: Path) -> None:
