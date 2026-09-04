@@ -1,6 +1,6 @@
 # 视频插画主题库
 
-本表是 BoomEarth 的稳定中文调用合同。用户明确说出某条中文指令时，按对应目标执行；未明确指定时，新建视频默认使用 `xiaohei-white-first-v1`，并路由到 `ian-xiaohei-illustrations`。四个 `profiled-illustration-v4` 主题和 `semantic-handdrawn-v3/type-led` 仅允许显式选择，绝不是回退方案。历史项目不迁移。
+本表是 BoomEarth 的稳定中文调用合同。用户明确说出某条中文指令时，按对应目标执行；未明确指定时，新建视频默认使用 `xiaohei-white-first-v1`，并路由到 `katerj-xiaohei-illustrations`。五个 `profiled-illustration-v4` 主题和 `semantic-handdrawn-v3/type-led` 仅允许显式选择，绝不是回退方案。历史项目不迁移。
 
 ## 既有四种入口
 
@@ -24,9 +24,9 @@
 - 中文指令：`这条视频使用动态文字卡片风格，画面以文字关系、路径和轻量图标为主。`
 - 目标：`semantic-handdrawn-v3/type-led`
 
-## V4 四个独立主题
+## V4 五个独立主题
 
-四者统一使用 `profiled-illustration-v4`、content plan schema 4、manifest schema 3、3840×2160、16:9、`text_policy: none` 和 `bottom-150px`。图片模型不负责准确中文；标签由 renderer 根据 `overlay_labels` 绘制。每个主题必须先写 prompt，再生成候选，再做八项通用 QC 与本主题专属 QC。
+五者统一使用 `profiled-illustration-v4`、content plan schema 4、manifest schema 3、3840×2160、16:9 和 `bottom-150px`。前四个主题使用 `text_policy: none`，标签由 renderer 根据 `overlay_labels` 绘制；小黄主题使用 `text_policy: embedded`，由图片模型生成经过审核的短手写中文，renderer 禁止重复叠标签。每个主题必须先写 prompt，再生成候选，再做八项通用 QC 与本主题专属 QC。
 
 ### 鲜彩漫画讲解
 
@@ -64,6 +64,15 @@
 - 适合：流程、系统、分组、对比或循环。`theme_structure` 必须明确选定一种关系结构，画面按单一路径解释。
 - 固定视觉：白板质感、黑色马克笔主线、蓝色唯一强调色、框线和箭头；不是 PPT 页面，也不以人物表演为主。
 - 专属 QC：`marker_material_clear`、`blue_black_palette_only`、`structure_type_clear`、`reading_path_clear`、`not_ppt_page`、`not_character_led`。
+
+### 小黄温度插画
+
+- 中文指令：`这条视频使用小黄温度插画风格，让固定暖黄色角色用动作和原生手写中文解释文案。`
+- 主题 ID：`xiaohuang-warm-first-v1`
+- prompt 风格：`warm-white-hand-drawn-xiaohuang-character-with-native-chinese-labels`
+- 适合：知识解释、步骤、对比、痛点和认知转折。小黄必须承担关键动作，不得只站在文字旁边。
+- 固定视觉：暖白底、轻黑手绘线、蜡笔或彩铅质感、暖黄不规则种子形角色、空心爱心天线、竖椭圆眼、淡腮红和细黑四肢；每场 2–4 个原生手写短标签。
+- 专属 QC：`xiaohuang_identity_consistent`、`character_performs_action`、`native_labels_correct`、`warm_white_canvas`、`not_system_label_overlay`。
 
 ## 通用拒绝条件
 

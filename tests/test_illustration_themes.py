@@ -19,6 +19,7 @@ EXPECTED_THEMES = {
     "engineering-sketch-explainer",
     "four-panel-comic-explainer",
     "blue-black-whiteboard-explainer",
+    "xiaohuang-warm-first-v1",
 }
 
 EXPECTED_QC = {
@@ -52,6 +53,13 @@ EXPECTED_QC = {
         "not_ppt_page",
         "not_character_led",
     },
+    "xiaohuang-warm-first-v1": {
+        "xiaohuang_identity_consistent",
+        "character_performs_action",
+        "native_labels_correct",
+        "warm_white_canvas",
+        "not_system_label_overlay",
+    },
 }
 
 
@@ -66,6 +74,7 @@ def test_profiled_theme_registry_is_exact_and_immutable() -> None:
         "工程手稿图解",
         "四格连环漫画",
         "蓝黑白板讲解",
+        "小黄温度插画",
     }
     assert {
         theme_id: set(theme.required_qc)
@@ -77,7 +86,7 @@ def test_profiled_theme_registry_is_exact_and_immutable() -> None:
         THEMES["vivid-comic-explainer"].directory = "changed"  # type: ignore[misc]
 
 
-def test_chinese_style_catalog_has_eight_unique_stable_entries() -> None:
+def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
     assert [entry.chinese_name for entry in CHINESE_STYLE_CATALOG] == [
         "小黑怪诞插画",
         "编辑动效插画",
@@ -87,6 +96,7 @@ def test_chinese_style_catalog_has_eight_unique_stable_entries() -> None:
         "工程手稿图解",
         "四格连环漫画",
         "蓝黑白板讲解",
+        "小黄温度插画",
     ]
     assert [entry.target for entry in CHINESE_STYLE_CATALOG[:4]] == [
         "xiaohei-white-first-v1",
@@ -99,8 +109,9 @@ def test_chinese_style_catalog_has_eight_unique_stable_entries() -> None:
         "engineering-sketch-explainer",
         "four-panel-comic-explainer",
         "blue-black-whiteboard-explainer",
+        "xiaohuang-warm-first-v1",
     ]
-    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 8
+    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 9
     assert all(entry.invocation.endswith("。") for entry in CHINESE_STYLE_CATALOG)
 
 
@@ -121,9 +132,21 @@ def test_default_request_resolves_to_xiaohei_contract() -> None:
         schema_version=1,
         visual_system="xiaohei-white-first-v1",
         visual_theme=None,
-        illustration_skill="ian-xiaohei-illustrations",
+        illustration_skill="katerj-xiaohei-illustrations",
     )
     assert illustration_themes.DEFAULT_VISUAL_TARGET == "xiaohei-white-first-v1"
+
+
+def test_xiaohuang_request_resolves_to_registered_profiled_theme() -> None:
+    assert illustration_themes.resolve_visual_style(
+        "xiaohuang-warm-first-v1"
+    ) == illustration_themes.ResolvedVisualStyle(
+        target="xiaohuang-warm-first-v1",
+        schema_version=4,
+        visual_system="profiled-illustration-v4",
+        visual_theme="xiaohuang-warm-first-v1",
+        illustration_skill="ra-video-illustrations",
+    )
 
 
 def test_default_request_never_resolves_to_type_led() -> None:

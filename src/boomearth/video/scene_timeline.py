@@ -50,6 +50,18 @@ _MAX_UNMAPPED_NOISE_WORDS = 6
 _MAX_UNMAPPED_NOISE_UNITS_PER_WORD = 1
 _CHINESE_DIGITS = "零一二三四五六七八九"
 _SINGLE_CHARACTER_HOMOPHONES = (frozenset("他她它"), frozenset("的地得"))
+_COMMON_ASR_SUBSTITUTIONS = {
+    "在": frozenset(("在", "再")),
+    "插": frozenset(("插", "擦")),
+    "主": frozenset(("主", "逐")),
+    "黑键": frozenset(("黑键", "HeyGen")),
+    "所": frozenset(("所", "锁")),
+    "分": frozenset(("分", "粉")),
+    "作": frozenset(("作", "做")),
+}
+_COMMON_ASR_RUN_SUBSTITUTIONS = {
+    ("六", "键"): frozenset(("new建",)),
+}
 
 
 class SceneTimelineError(RuntimeError):
@@ -219,14 +231,191 @@ def _segment_texts(plan_snapshot: ContentPlanSnapshot) -> tuple[str, ...]:
 
 
 def _chinese_integer(value: int) -> str | None:
-    if not 0 <= value < 100:
+    if not 0 <= value < 10_000:
         return None
     if value < 10:
         return _CHINESE_DIGITS[value]
-    tens, ones = divmod(value, 10)
-    prefix = "" if tens == 1 else _CHINESE_DIGITS[tens]
-    suffix = "" if ones == 0 else _CHINESE_DIGITS[ones]
-    return f"{prefix}十{suffix}"
+    if value < 100:
+        tens, ones = divmod(value, 10)
+        prefix = "" if tens == 1 else _CHINESE_DIGITS[tens]
+        suffix = "" if ones == 0 else _CHINESE_DIGITS[ones]
+        return f"{prefix}十{suffix}"
+    if value < 1_000:
+        hundreds, remainder = divmod(value, 100)
+        if remainder == 0:
+            return f"{_CHINESE_DIGITS[hundreds]}百"
+        separator = "零" if remainder < 10 else ""
+        return f"{_CHINESE_DIGITS[hundreds]}百{separator}{_chinese_integer(remainder)}"
+    thousands, remainder = divmod(value, 1_000)
+    if remainder == 0:
+        return f"{_CHINESE_DIGITS[thousands]}千"
+    separator = "零" if remainder < 100 else ""
+    return f"{_CHINESE_DIGITS[thousands]}千{separator}{_chinese_integer(remainder)}"
+
+
+def _number_token_variants(token: str) -> frozenset[str]:
+    if token.isdigit() and 1 <= len(token) <= 4:
+        value = int(token)
+        spoken = _chinese_integer(value)
+        digit_by_digit = "".join(_CHINESE_DIGITS[int(character)] for character in token)
+        return frozenset(item for item in (token, spoken, digit_by_digit) if item)
+    match = re.fullmatch(r"(\d{1,4})\.(\d{1,4})", token)
+    if match is not None:
+        fractional = "".join(
+            _CHINESE_DIGITS[int(character)] for character in match.group(2)
+        )
+        return frozenset(
+            f"{integer}点{fractional}"
+            for integer in _number_token_variants(match.group(1))
+        ) | frozenset((token,))
+    match = re.fullmatch(r"(\d{1,4})[xX×](\d{1,4})", token)
+    if match is not None:
+        return frozenset(
+            f"{left}乘{right}"
+            for left in _number_token_variants(match.group(1))
+            for right in _number_token_variants(match.group(2))
+        ) | frozenset((token,))
+    match = re.fullmatch(r"(\d{1,4})[:：](\d{1,4})", token)
+    if match is not None:
+        return frozenset(
+            f"{left}比{right}"
+            for left in _number_token_variants(match.group(1))
+            for right in _number_token_variants(match.group(2))
+        ) | frozenset((token,))
+    return frozenset((token,))
+
+
+def _token_variants(token: str) -> frozenset[str]:
+    variants = set(_number_token_variants(token))
+    variants.update(_COMMON_ASR_SUBSTITUTIONS.get(token, ()))
+    if len(token) == 1 and token in _CHINESE_DIGITS:
+        variants.add(str(_CHINESE_DIGITS.index(token)))
+    return frozenset(variants)
+
+
+def _equivalent_unmapped_run(
+    *,
+    word_indexes: tuple[int, ...],
+    words: tuple[ASRWord, ...],
+    alignment: AlignmentResult,
+    script: str,
+) -> bool:
+    if not word_indexes:
+        return False
+    left, right = _unmapped_run_script_bounds(
+        word_indexes=word_indexes,
+        alignment=alignment,
+        script_length=len(script),
+    )
+    gap = "".join(character for character in script[left:right] if character.isalnum())
+    if not gap:
+        return False
+    tokens = tuple(words[index].text for index in word_indexes)
+    if gap.casefold() in {
+        value.casefold()
+        for value in _COMMON_ASR_RUN_SUBSTITUTIONS.get(tokens, ())
+    }:
+        return True
+    candidates = {""}
+    for index in word_indexes:
+        candidates = {
+            prefix + variant
+            for prefix in candidates
+            for variant in _token_variants(words[index].text)
+        }
+    return gap in candidates
+
+
+def _unmapped_run_script_bounds(
+    *,
+    word_indexes: tuple[int, ...],
+    alignment: AlignmentResult,
+    script_length: int,
+) -> tuple[int, int]:
+    mapped_pairs = tuple(
+        (script_index, word_index)
+        for script_index, word_index in zip(
+            alignment.script_indices, alignment.word_indices
+        )
+        if word_index is not None
+    )
+    previous_positions = [
+        script_index
+        for script_index, word_index in mapped_pairs
+        if word_index < word_indexes[0]
+    ]
+    next_positions = [
+        script_index
+        for script_index, word_index in mapped_pairs
+        if word_index > word_indexes[-1]
+    ]
+    left = max(previous_positions) + 1 if previous_positions else 0
+    right = min(next_positions) if next_positions else script_length
+    return left, right
+
+
+def _equivalent_unmapped_run_indexes(
+    *,
+    indexes: set[int],
+    words: tuple[ASRWord, ...],
+    alignment: AlignmentResult,
+    script: str,
+) -> set[int]:
+    runs: list[list[int]] = []
+    for index in sorted(indexes):
+        if not runs or index != runs[-1][-1] + 1:
+            runs.append([index])
+        else:
+            runs[-1].append(index)
+    equivalent: set[int] = set()
+    for run in runs:
+        value = tuple(run)
+        if _equivalent_unmapped_run(
+            word_indexes=value,
+            words=words,
+            alignment=alignment,
+            script=script,
+        ):
+            equivalent.update(value)
+    return equivalent
+
+
+def _equivalent_unmapped_script_indexes(
+    *,
+    indexes: set[int],
+    words: tuple[ASRWord, ...],
+    alignment: AlignmentResult,
+    script: str,
+) -> set[int]:
+    runs: list[list[int]] = []
+    for index in sorted(indexes):
+        if not runs or index != runs[-1][-1] + 1:
+            runs.append([index])
+        else:
+            runs[-1].append(index)
+    equivalent: set[int] = set()
+    for run in runs:
+        word_indexes = tuple(run)
+        if not _equivalent_unmapped_run(
+            word_indexes=word_indexes,
+            words=words,
+            alignment=alignment,
+            script=script,
+        ):
+            continue
+        left, right = _unmapped_run_script_bounds(
+            word_indexes=word_indexes,
+            alignment=alignment,
+            script_length=len(script),
+        )
+        equivalent.update(
+            script_index
+            for script_index, word_index in zip(
+                alignment.script_indices, alignment.word_indices
+            )
+            if left <= script_index < right and word_index is None
+        )
+    return equivalent
 
 
 def _is_equivalent_number_normalization(
@@ -336,6 +525,34 @@ def _is_short_ascii_prefix_noise(
     )
 
 
+def _is_short_duplicate_noise(
+    *,
+    word_index: int,
+    words: tuple[ASRWord, ...],
+    mapped_word_indexes: set[int],
+) -> bool:
+    word = words[word_index]
+    if len(word.text) != 1 or word.end - word.start > 0.12:
+        return False
+    if word_index > 0:
+        previous = words[word_index - 1]
+        if (
+            word_index - 1 in mapped_word_indexes
+            and previous.text == word.text
+            and 0 <= word.start - previous.end <= 0.15
+        ):
+            return True
+    if word_index + 1 < len(words):
+        following = words[word_index + 1]
+        if (
+            word_index + 1 in mapped_word_indexes
+            and following.text == word.text
+            and 0 <= following.start - word.end <= 0.15
+        ):
+            return True
+    return False
+
+
 def _alignment_scenes(
     *,
     plan_snapshot: ContentPlanSnapshot,
@@ -361,10 +578,24 @@ def _alignment_scenes(
     substantive_word_indexes = {
         index for index, word in enumerate(words) if any(character.isalnum() for character in word.text)
     }
+    unmapped_candidates = substantive_word_indexes - mapped_word_indexes
+    equivalent_run_indexes = _equivalent_unmapped_run_indexes(
+        indexes=unmapped_candidates,
+        words=words,
+        alignment=alignment,
+        script=full_script,
+    )
+    equivalent_script_indexes = _equivalent_unmapped_script_indexes(
+        indexes=unmapped_candidates,
+        words=words,
+        alignment=alignment,
+        script=full_script,
+    )
     unmapped_word_indexes = {
         index
-        for index in substantive_word_indexes - mapped_word_indexes
-        if not _is_equivalent_number_normalization(
+        for index in unmapped_candidates
+        if index not in equivalent_run_indexes
+        and not _is_equivalent_number_normalization(
             word_index=index,
             words=words,
             alignment=alignment,
@@ -377,6 +608,11 @@ def _alignment_scenes(
             script=full_script,
         )
         and not _is_short_ascii_prefix_noise(
+            word_index=index,
+            words=words,
+            mapped_word_indexes=mapped_word_indexes,
+        )
+        and not _is_short_duplicate_noise(
             word_index=index,
             words=words,
             mapped_word_indexes=mapped_word_indexes,
@@ -404,7 +640,10 @@ def _alignment_scenes(
             )
             if start <= script_index < end
         ]
-        matched = sum(word_index is not None for _, word_index in pairs)
+        matched = sum(
+            word_index is not None or script_index in equivalent_script_indexes
+            for script_index, word_index in pairs
+        )
         word_indexes = {word_index for _, word_index in pairs if word_index is not None}
         if not pairs or matched / len(pairs) < 0.80 or not word_indexes:
             raise SceneTimelineError("scene alignment is invalid")

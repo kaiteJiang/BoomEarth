@@ -587,10 +587,12 @@ def _initial_selection(
         if expected not in by_path or expected not in skill_paths:
             raise GitHubSkillAcquisitionError("github-skill-skill-missing")
         selected_skills = [expected]
-    if not selected_skills:
+    if target.scope != "repository" and not selected_skills:
         raise GitHubSkillAcquisitionError("github-skill-skill-missing")
     roles.update({path: "skill" for path in selected_skills})
     selected = sorted(set(root_readmes + selected_skills))
+    if not selected:
+        raise GitHubSkillAcquisitionError("github-skill-skill-missing")
     if len(selected) > MAX_MARKDOWN_FILES:
         raise GitHubSkillAcquisitionError(
             "github-skill-request-budget-exceeded"

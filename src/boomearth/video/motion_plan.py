@@ -43,6 +43,7 @@ _PROFILED_VISUAL_EFFECT = {
     "engineering-sketch-explainer": "line-reveal",
     "four-panel-comic-explainer": "wipe-right",
     "blue-black-whiteboard-explainer": "line-reveal",
+    "xiaohuang-warm-first-v1": "scale-settle",
 }
 
 

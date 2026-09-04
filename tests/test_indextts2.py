@@ -844,6 +844,34 @@ def test_explicit_audio_reuse_appends_without_weakening_render_rebind_guard(
         )
 
 
+def test_manifest_registration_preserves_retired_voice_ids(tmp_path: Path) -> None:
+    """Publishing a new narration must not reactivate retired references."""
+    module = importlib.import_module("boomearth.audio.indextts2")
+    ledger_path = tmp_path / "ledger.json"
+    output_hash = "a" * 64
+    manifest_hash = "b" * 64
+    retired_voice_ids = [
+        "user-indextts2-calm-v1",
+        "user-indextts2-calm-v2",
+    ]
+    _write_provenance_ledger(
+        ledger_path,
+        issued_manifest_sha256_by_output_sha256={},
+    )
+    payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    payload["retired_voice_ids"] = retired_voice_ids
+    ledger_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    module._register_provenance_manifest_while_locked(
+        ledger_path,
+        output_hash,
+        manifest_hash,
+    )
+
+    recorded = json.loads(ledger_path.read_text(encoding="utf-8"))
+    assert recorded["retired_voice_ids"] == retired_voice_ids
+
+
 def test_canonical_provenance_persistence_retains_v1_when_v2_is_appended_or_updated(
     tmp_path: Path,
 ) -> None:

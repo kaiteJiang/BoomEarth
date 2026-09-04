@@ -8,6 +8,7 @@ import ctypes
 import difflib
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -350,7 +351,7 @@ def load_script(
 
 def safe_caption_cut(text: str, max_chars: int) -> int:
     """Choose a balanced cut without breaking terms or discourse connectors."""
-    if reading_units(_display_caption_text(text)) <= max_chars:
+    if _caption_fits(text, max_chars):
         return len(text)
     protected = [match.span() for match in re.finditer(r"[A-Za-z0-9.+/\-]+(?: [A-Za-z0-9.+/\-]+)*", text)]
     for phrase in CAPTION_CONNECTORS:
@@ -396,24 +397,27 @@ def merge_short_chunks(chunks: list[str], max_chars: int) -> list[str]:
         length = reading_units(chunk)
         starts_forward = chunk.startswith(CAPTION_CONNECTORS)
         starts_ascii = bool(re.match(r"^[A-Za-z0-9]", chunk))
-        needs_merge = length < 8 or (starts_forward and length <= 8) or (starts_ascii and length <= 6)
+        needs_merge = length < 6 or (starts_forward and length <= 8) or (starts_ascii and length <= 6)
         if not needs_merge or len(merged) == 1:
             index += 1
             continue
-        options: list[tuple[int, int, str]] = []
+        options: dict[int, str] = {}
         if index > 0:
             combined = join_caption_chunks(merged[index - 1], chunk)
             if reading_units(combined) <= max_chars:
-                options.append((round(reading_units(combined)), index - 1, combined))
+                options[index - 1] = combined
         if index + 1 < len(merged):
             combined = join_caption_chunks(chunk, merged[index + 1])
             if reading_units(combined) <= max_chars:
-                preference = -100 if starts_forward or chunk in {"它和", "它做调研"} else 0
-                options.append((round(reading_units(combined)) + preference, index, combined))
+                options[index] = combined
         if not options:
             index += 1
             continue
-        _, target, combined = min(options)
+        prefer_next = starts_forward or chunk in {"它和", "它做调研"}
+        target = index if prefer_next and index in options else index - 1
+        if target not in options:
+            target = index
+        combined = options[target]
         if target == index - 1:
             merged[index - 1:index + 1] = [combined]
             index = max(0, index - 1)
@@ -441,12 +445,23 @@ def _display_caption_text(text: str) -> str:
     return "".join(character for character in normalized if character not in DISPLAY_PUNCTUATION).strip()
 
 
+def _caption_fits(text: str, max_chars: int) -> bool:
+    """Allow one intact ASCII name when the surrounding CJK stays in bounds."""
+
+    displayed = _display_caption_text(text)
+    if reading_units(displayed) <= max_chars:
+        return True
+    has_ascii_name = bool(re.search(r"[A-Za-z0-9.+/\-]+", displayed))
+    cjk_count = len(re.findall(r"[\u3400-\u9fff]", displayed))
+    return has_ascii_name and cjk_count <= max_chars
+
+
 def _split_long_caption(text: str, max_chars: int) -> list[str]:
     """Apply the oral-linebreak hard limit at safe semantic cuts."""
 
     pending = text.strip()
     chunks: list[str] = []
-    while reading_units(_display_caption_text(pending)) > max_chars:
+    while not _caption_fits(pending, max_chars):
         cut = safe_caption_cut(pending, max_chars)
         if cut <= 0 or cut >= len(pending):
             break
@@ -469,34 +484,23 @@ def split_caption_text(text: str, max_chars: int) -> list[str]:
     normalized = re.sub(r"[\r\n]+", "", text.strip())
     if not normalized:
         return []
-    boundaries = [match.end() for match in re.finditer(f"[{SEMANTIC_CLAUSE_PUNCTUATION}]", normalized)]
-    if not boundaries or boundaries[-1] != len(normalized):
-        boundaries.append(len(normalized))
-    chunks: list[str] = []
-    start = 0
-    current = 0
-    minimum_units = 6.0
-    for end in boundaries:
-        candidate = _display_caption_text(normalized[current:end])
-        current_text = _display_caption_text(normalized[start:current])
-        terminal = normalized[end - 1] in "。！？!?"
-        if (
-            current > start
-            and reading_units(current_text) >= minimum_units
-            and (reading_units(current_text) + reading_units(candidate) >= max_chars or terminal)
-        ):
-            chunks.append(current_text)
-            start = current
-        current = end
-        if terminal:
-            chunks.append(_display_caption_text(normalized[start:current]))
-            start = current
-    if current > start:
-        chunks.append(_display_caption_text(normalized[start:current]))
-    bounded: list[str] = []
-    for chunk in chunks:
-        bounded.extend(_split_long_caption(chunk, max_chars))
-    return merge_short_chunks([chunk for chunk in bounded if chunk], max_chars)
+    sentence_boundaries = [match.end() for match in re.finditer(r"[。？！!?]", normalized)]
+    if not sentence_boundaries or sentence_boundaries[-1] != len(normalized):
+        sentence_boundaries.append(len(normalized))
+
+    captions: list[str] = []
+    sentence_start = 0
+    for sentence_end in sentence_boundaries:
+        sentence = normalized[sentence_start:sentence_end]
+        sentence_start = sentence_end
+        clauses = re.split(f"[{SEMANTIC_CLAUSE_PUNCTUATION}]", sentence)
+        bounded: list[str] = []
+        for clause in clauses:
+            displayed = _display_caption_text(clause)
+            if displayed:
+                bounded.extend(_split_long_caption(displayed, max_chars))
+        captions.extend(merge_short_chunks(bounded, max_chars))
+    return captions
 
 
 def reading_units(text: str) -> float:
@@ -696,7 +700,9 @@ def build_captions(script: str, mapping: list[int], asr_timings: list[dict[str, 
         next_start = captions[index + 1]["start"] if index + 1 < len(captions) else None
         desired = max(caption["end"] + 0.12, caption["start"] + 0.6)
         if next_start is not None:
-            caption["end"] = round(min(desired, next_start - frame_gap), 3)
+            caption["end"] = math.floor(
+                min(desired, next_start - frame_gap) * 1000
+            ) / 1000
         else:
             caption["end"] = round(desired, 3)
     return captions

@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![Local First](https://img.shields.io/badge/Architecture-Local_First-111827)](#隐私不是补丁而是系统边界)
-[![Skills](https://img.shields.io/badge/Project_Skills-42-7C3AED)](#skill-组成)
+[![Skills](https://img.shields.io/badge/Project_Skills-43-7C3AED)](#skill-组成)
 [![Video](https://img.shields.io/badge/Output-1080P%20%2F%2030FPS-E11D48)](#后端多样式生成)
 [![License](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE)
 
@@ -125,7 +125,7 @@ BoomEarth 同时交付旁白、字幕六件套、插画素材、数字人 master
 
 ## Skill 组成
 
-当前仓库包含 **42 个项目级 Skill 入口**，其中 **19 个 `katerj-*` Skill 是生产真源**；历史 `ra-*`、`rn-*` 等名称保留为兼容桥，旧流程不需要一次性重写。
+当前仓库包含 **43 个项目级 Skill 入口**，其中 **20 个 `katerj-*` Skill 是生产真源**；历史 `ra-*`、`rn-*` 等名称保留为兼容桥，旧流程不需要一次性重写。
 
 | 层级 | 代表 Skill | 职责 |
 | --- | --- | --- |
@@ -181,7 +181,7 @@ IndexTTS2 最终旁白锁定
 
 ```text
 BoomEarth/
-├─ .agents/skills/              # 42 个项目级 Skill 与兼容桥
+├─ .agents/skills/              # 43 个项目级 Skill 与兼容桥
 ├─ automation/
 │  ├─ config/                   # 本地路由与非敏感配置
 │  └─ scripts/                  # 采集、编译、渲染、QC、归档脚本
@@ -261,4 +261,3 @@ BoomEarth 能从一个视频脚本，走到今天这套可复验、可恢复、�
 特别感谢 **卡神、雪踏大佬、苍何老师、ChenShuo 老师**，以及持续分享文章、方法、Skill、代码和实战经验的各位 AI 大佬。
 
 AI 时代最让人兴奋的，不只是模型越来越强，而是我们真的可以站在巨人的肩膀上，把一次灵感继续做成一套人人都能使用的系统。
-

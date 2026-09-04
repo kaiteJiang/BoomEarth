@@ -33,7 +33,8 @@ V4 先执行上述八项通用检查，再只执行所选主题的精确专属�
 - `engineering-sketch-explainer`：`engineering_subject_real`、`callouts_support_claim`、`mechanical_exception_valid`、`linework_clean`、`diagram_not_overloaded`。
 - `four-panel-comic-explainer`：`exactly_four_panels`、`reading_order_clear`、`beats_continuous`、`character_consistent`、`one_event_per_panel`、`lower_panels_caption_safe`。
 - `blue-black-whiteboard-explainer`：`marker_material_clear`、`blue_black_palette_only`、`structure_type_clear`、`reading_path_clear`、`not_ppt_page`、`not_character_led`。
+- `xiaohuang-warm-first-v1`：`xiaohuang_identity_consistent`、`character_performs_action`、`native_labels_correct`、`warm_white_canvas`、`not_system_label_overlay`。
 
 正式图字节必须与候选 01 或候选 02 之一完全一致。主审打开 3840×2160 实图后记录相关性理由；fixture、纯色占位图和仅有文件哈希的自动检查不能替代真实多模态判断。
 
-四主题真实验收还必须由 `multimodal-review` 在 2×2 contact sheet 上记录六组两两区别：每一对主题都要写明线条、材质、结构或叙事方式的可见差异。四个不同文件哈希不能代替视觉区分结论；每个 prompt、主题审核记录和共享测试判断必须绑定同一个 claim SHA-256。
+主题库真实验收还必须由 `multimodal-review` 在 contact sheet 上记录所选主题与相邻主题在线条、材质、结构或叙事方式上的可见差异。不同文件哈希不能代替视觉区分结论；每个 prompt、主题审核记录和共享测试判断必须绑定同一个 claim SHA-256。

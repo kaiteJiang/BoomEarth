@@ -72,7 +72,7 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_xiaohei_render_rejects_scene_without_local_text_layer(project: Path) -> None:
+def test_xiaohei_embedded_text_does_not_render_system_labels(project: Path) -> None:
     scene = SimpleNamespace(
         id="scene-01",
         chapter="问题",
@@ -82,7 +82,8 @@ def test_xiaohei_render_rejects_scene_without_local_text_layer(project: Path) ->
         notes=(),
         kicker="断点续跑",
         visual_mode=None,
-        overlay_labels=(),
+        overlay_labels=("动作主体", "关键结果"),
+        illustration_text_mode="embedded",
         layout_variant="standard",
     )
     plan = SimpleNamespace(
@@ -92,15 +93,85 @@ def test_xiaohei_render_rejects_scene_without_local_text_layer(project: Path) ->
         scenes=(SimpleNamespace(start=0.0, end=3.0),)
     )
 
-    with pytest.raises(
-        ContentRenderProjectError, match="xiaohei text layer is required"
-    ):
-        _scene_html(
-            plan,
-            timeline,
-            {"scene-01": "scene-01.png"},
-            xiaohei_motion=True,
-        )
+    markup = _scene_html(
+        plan,
+        timeline,
+        {"scene-01": "scene-01.png"},
+        xiaohei_motion=True,
+    )
+
+    assert 'data-illustration-text-mode="embedded"' in markup
+    assert "visual-overlay-labels" not in markup
+    assert "动作主体" not in markup
+
+
+def test_xiaohei_local_fallback_is_explicit_and_uses_handwritten_labels(
+    project: Path,
+) -> None:
+    scene = SimpleNamespace(
+        id="scene-01",
+        chapter="问题",
+        progress="01 / 01",
+        title_lines=("只修故障",),
+        subtitle_lines=(),
+        notes=(),
+        kicker="断点续跑",
+        visual_mode=None,
+        overlay_labels=("动作主体", "关键结果"),
+        illustration_text_mode="local-fallback",
+        layout_variant="standard",
+    )
+    plan = SimpleNamespace(
+        scenes=(scene,), visual_system="xiaohei-white-first-v1"
+    )
+    timeline = SimpleNamespace(
+        scenes=(SimpleNamespace(start=0.0, end=3.0),)
+    )
+
+    markup = _scene_html(
+        plan,
+        timeline,
+        {"scene-01": "scene-01.png"},
+        xiaohei_motion=True,
+    )
+
+    assert 'data-illustration-text-mode="local-fallback"' in markup
+    assert 'class="xiaohei-fallback-label' in markup
+    assert "动作主体" in markup
+
+
+def test_xiaohuang_native_text_does_not_render_system_labels(project: Path) -> None:
+    scene = SimpleNamespace(
+        id="scene-01",
+        chapter="价值",
+        progress="01 / 01",
+        title_lines=("把抽象概念画明白",),
+        subtitle_lines=(),
+        notes=(),
+        kicker="温度感",
+        visual_mode="human-action",
+        overlay_labels=("有温度", "看得懂"),
+        illustration_text_mode="legacy-overlay",
+        layout_variant="standard",
+    )
+    plan = SimpleNamespace(
+        scenes=(scene,),
+        visual_system="profiled-illustration-v4",
+        visual_theme="xiaohuang-warm-first-v1",
+    )
+    timeline = SimpleNamespace(
+        scenes=(SimpleNamespace(start=0.0, end=3.0),)
+    )
+
+    markup = _scene_html(
+        plan,
+        timeline,
+        {"scene-01": "scene-01.png"},
+    )
+
+    assert 'data-illustration-text-mode="embedded"' in markup
+    assert "visual-overlay-labels" not in markup
+    assert "有温度" not in markup
 
 
 def _set_handoff_visual(root: Path, target: str) -> None:
@@ -332,6 +403,15 @@ def test_new_xiaohei_snapshot_uses_stable_component_motion(project: Path) -> Non
     assert "opacity:1,duration:0.3,ease:'power3.inOut'" in html
     assert "{opacity:0,x:-28}" in html
     assert "power3.out" in html
+
+
+def test_xiaohei_embedded_labels_are_not_duplicated_by_component_timeline(
+    project: Path,
+) -> None:
+    prepared = _prepare(project)
+    html = (prepared.output_dir / "index.html").read_text(encoding="utf-8")
+
+    assert "--overlay-label-" not in html
 
 
 def test_prepare_generic_v3_project_stages_semantic_assets_motion_and_background(
@@ -751,3 +831,29 @@ def test_v3_template_has_deterministic_overlay_and_type_led_layouts() -> None:
     assert ".type-led-comparison" in template
     assert ".type-led-connector[data-connector=\"path\"]" in template
     assert "bottom: 150px" in template
+
+
+def test_xiaohei_template_uses_white_canvas_and_feathered_art_edges() -> None:
+    template = (
+        Path(__file__).parents[1]
+        / "video-content-template"
+        / "index.template.html"
+    ).read_text(encoding="utf-8")
+
+    assert "--xiaohei-canvas-bg: #fff" in template
+    assert ".xiaohei-native-text" in template
+    assert "mask-image:" in template
+    assert "filter: blur" not in template
+    assert "STKaiti" not in template
+
+
+def test_xiaohuang_template_reuses_feathered_art_edges() -> None:
+    template = (
+        Path(__file__).parents[1]
+        / "video-content-template"
+        / "index.template.html"
+    ).read_text(encoding="utf-8")
+
+    assert ".xiaohuang-native-text .visual-frame img" in template
+    assert "mask-image:" in template
+    assert "filter: blur" not in template

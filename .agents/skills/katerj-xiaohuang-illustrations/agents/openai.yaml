@@ -1,0 +1,4 @@
+interface:
+  display_name: "KaterJ 小黄温度插画"
+  short_description: "用固定小黄角色和原生手写中文完成 BoomEarth 语义场景插画"
+  default_prompt: "使用 $katerj-xiaohuang-illustrations 为这条 BoomEarth 视频规划并制作逐场景小黄插画，锁定角色身份、原生手写标签和语义 QC。"

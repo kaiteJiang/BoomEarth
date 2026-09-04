@@ -36,6 +36,31 @@ V3_CHECKS = {
 }
 
 
+def test_xiaohei_embedded_prompt_requires_native_reviewed_labels() -> None:
+    scene = SimpleNamespace(
+        illustration_text_mode="embedded",
+        overlay_labels=("动作主体", "关键结果"),
+    )
+    valid = (
+        "text_policy: embedded\n"
+        "handwritten_labels: 动作主体 | 关键结果\n"
+        "小黑把任务卡推向结果区域。\n"
+    ).encode("utf-8")
+
+    illustration_module._validate_xiaohei_prompt_contract(valid, scene=scene)
+
+    for invalid in (
+        b"text_policy: none\nNo written words.\n",
+        "text_policy: embedded\nhandwritten_labels: 动作主体\n".encode("utf-8"),
+    ):
+        with pytest.raises(
+            IllustrationManifestError, match="illustration-prompt-invalid"
+        ):
+            illustration_module._validate_xiaohei_prompt_contract(
+                invalid, scene=scene
+            )
+
+
 def _load_validation_cli():
     script = (
         Path(__file__).resolve().parents[1]
@@ -493,7 +518,7 @@ def test_validate_xiaohei_manifest_binds_prompt_candidate_asset_and_qc(
         "mobile-readable",
         "anchor-dark",
         (scene,),
-        "ian-xiaohei-illustrations",
+        "katerj-xiaohei-illustrations",
     )
     qc = {
         "schema_version": 1,
@@ -517,7 +542,7 @@ def test_validate_xiaohei_manifest_binds_prompt_candidate_asset_and_qc(
     qc_path.write_text(json.dumps(qc, ensure_ascii=False), encoding="utf-8")
     value = {
         "schema_version": 1,
-        "illustration_skill": "ian-xiaohei-illustrations",
+        "illustration_skill": "katerj-xiaohei-illustrations",
         "visual_system": "xiaohei-white-first-v1",
         "content_plan_sha256": plan_hash,
         "semantic_qc_path": "工程/assets/xiaohei-illustrations/semantic-qc.json",
@@ -771,6 +796,45 @@ def test_v4_prompt_contract_accepts_legacy_production_headings() -> None:
     values = illustration_module._v4_prompt_contract(payload)
 
     assert values["scene_id"] == "scene-01"
+
+
+def test_v4_prompt_contract_accepts_embedded_text_only_for_xiaohuang() -> None:
+    body = (
+        "---\n"
+        "scene_id: scene-01\n"
+        "visual_type: concept-scene\n"
+        "visual_style: xiaohuang-warm-first-v1\n"
+        "visual_mode: human-action\n"
+        "visual_system: profiled-illustration-v4\n"
+        "visual_theme: xiaohuang-warm-first-v1\n"
+        "ratio: 16:9\n"
+        "target_size: 3840x2160\n"
+        "text_policy: embedded\n"
+        "caption_safe_zone: bottom-150px\n"
+        "---\n\n"
+        "1. 当前场景唯一判断：小黄让知识更容易理解\n"
+        "2. 语义主体：小黄和知识卡片\n"
+        "3. 核心动作或关系：小黄把卡片连接起来\n"
+        "4. 必须可见的证据：小黄亲自完成连接动作\n"
+        "5. 构图、左侧程序文字区和底部字幕安全区：全部保留\n"
+        "6. 当前主题的线条、材质和色板：暖白底和轻手绘\n"
+        "7. 当前主题专项结构：空心爱心天线和暖黄种子身体\n"
+        "8. 为什么画面能解释判断：动作直接表现连接\n"
+        "9. overlay labels，仅供 renderer 读取但禁止绘制：有温度｜看得懂，作为原生手写中文\n"
+        "10. 禁止意象：禁止系统标签、标题、字幕、Logo、水印和 PPT\n"
+    )
+
+    values = illustration_module._v4_prompt_contract(body.encode("utf-8"))
+
+    assert values["text_policy"] == "embedded"
+
+    invalid = body.replace(
+        "xiaohuang-warm-first-v1", "vivid-comic-explainer"
+    )
+    with pytest.raises(
+        IllustrationManifestError, match="^illustration-prompt-invalid$"
+    ):
+        illustration_module._v4_prompt_contract(invalid.encode("utf-8"))
 
 
 def test_profiled_manifest_rejects_content_plan_theme_mismatch(

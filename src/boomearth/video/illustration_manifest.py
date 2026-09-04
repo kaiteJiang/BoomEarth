@@ -439,7 +439,13 @@ def _v4_prompt_contract(payload: bytes) -> dict[str, str]:
         or values["visual_system"] != PROFILED_VISUAL_SYSTEM
         or values["ratio"] != "16:9"
         or values["target_size"] != "3840x2160"
-        or values["text_policy"] != "none"
+        or values["text_policy"]
+        != (
+            "embedded"
+            if values["visual_theme"] == "xiaohuang-warm-first-v1"
+            and values["visual_style"] == "xiaohuang-warm-first-v1"
+            else "none"
+        )
         or values["caption_safe_zone"] != "bottom-150px"
     ):
         raise IllustrationManifestError("illustration-prompt-invalid")
@@ -566,6 +572,35 @@ def _xiaohei_candidate_contract(snapshot: FileSnapshot) -> None:
         raise IllustrationManifestError("illustration-image-invalid")
 
 
+def _validate_xiaohei_prompt_contract(payload: bytes, *, scene: object) -> None:
+    """Bind new Xiaohei prompts to their reviewed native handwritten labels."""
+
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeError:
+        raise IllustrationManifestError("illustration-prompt-invalid") from None
+    text_mode = getattr(scene, "illustration_text_mode", "legacy-overlay")
+    if text_mode == "legacy-overlay":
+        if not text.strip():
+            raise IllustrationManifestError("illustration-prompt-invalid")
+        return
+    if text_mode not in {"embedded", "local-fallback"}:
+        raise IllustrationManifestError("illustration-prompt-invalid")
+    lines = tuple(line.strip() for line in text.splitlines() if line.strip())
+    expected_policy = f"text_policy: {text_mode}"
+    label_prefix = "handwritten_labels: "
+    label_lines = tuple(line for line in lines if line.startswith(label_prefix))
+    labels = tuple(getattr(scene, "overlay_labels", ()))
+    if (
+        expected_policy not in lines
+        or "text_policy: none" in lines
+        or len(label_lines) != 1
+        or tuple(item.strip() for item in label_lines[0][len(label_prefix) :].split("|"))
+        != labels
+    ):
+        raise IllustrationManifestError("illustration-prompt-invalid")
+
+
 def _validate_xiaohei_manifest(
     value: object, *, project_root: Path, content_plan: ContentPlan
 ) -> IllustrationManifest:
@@ -575,7 +610,7 @@ def _validate_xiaohei_manifest(
     if (
         value.get("schema_version") != 1
         or isinstance(value.get("schema_version"), bool)
-        or value.get("illustration_skill") != "ian-xiaohei-illustrations"
+        or value.get("illustration_skill") != "katerj-xiaohei-illustrations"
         or value.get("visual_system") != "xiaohei-white-first-v1"
         or content_plan.schema_version != 1
         or content_plan.visual_system != "xiaohei-white-first-v1"
@@ -681,8 +716,7 @@ def _validate_xiaohei_manifest(
         ):
             if not isinstance(recorded, str) or _DIGEST.fullmatch(recorded) is None or recorded != snapshot.sha256:
                 raise IllustrationManifestError("illustration-input-changed")
-        if not prompt.payload.decode("utf-8", errors="strict").strip():
-            raise IllustrationManifestError("illustration-prompt-invalid")
+        _validate_xiaohei_prompt_contract(prompt.payload, scene=scene)
         _xiaohei_candidate_contract(candidate)
         _image_contract(
             selected,
@@ -723,7 +757,7 @@ def _validate_xiaohei_manifest(
         raise IllustrationManifestError("illustration-scene-invalid")
     return IllustrationManifest(
         schema_version=1,
-        illustration_skill="ian-xiaohei-illustrations",
+        illustration_skill="katerj-xiaohei-illustrations",
         visual_system="xiaohei-white-first-v1",
         assets=tuple(assets),
         content_plan_sha256=plan_snapshot.sha256,

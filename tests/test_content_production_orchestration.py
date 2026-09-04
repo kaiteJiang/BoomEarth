@@ -13,6 +13,7 @@ import sys
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image, ImageDraw
 
 from test_v2_production_orchestration import (
     REPO_ROOT,
@@ -1071,7 +1072,7 @@ def test_content_wrapper_rejects_avatar_traversal_outside_the_active_project(
 def _write_real_content_fixture(project, monkeypatch) -> str:
     _write_canonical_synthetic_inputs(project, monkeypatch)
     segments = ("甲。", "乙。", "丙。", "丁。")
-    _write_synthetic_wav(project.narration_path, seconds=5.2)
+    _write_synthetic_wav(project.narration_path, seconds=16.0)
     narration_hash = hashlib.sha256(project.narration_path.read_bytes()).hexdigest()
     batch = project.media_dir / "segments.jsonl"
     batch_bytes = b"".join(
@@ -1103,11 +1104,11 @@ def _write_real_content_fixture(project, monkeypatch) -> str:
     project.handoff_path.write_text(
         "---\n"
         "status: 制作中\nplatform: local-v1\nratio: '16:9'\n"
-        "duration_target_s: 5.200\nword_count: 4\n"
+        "duration_target_s: 16.000\nword_count: 4\n"
         f"voice: {CURRENT_VOICE_ID}\nvoice_provider: indextts2-local\n"
         "captions: asr-word-timestamps\ncaption_style: anchor-dark\n"
         "visual: xiaohei-white-first-v1\n"
-        "illustration_skill: ian-xiaohei-illustrations\n"
+        "illustration_skill: katerj-xiaohei-illustrations\n"
         f"archive_slug: {project.archive_slug}\n---\n\n"
         f"## 新稿分段\n\n{headings}\n\n## 分段视觉意图\n\n- 四场景离线验收。\n",
         encoding="utf-8",
@@ -1115,12 +1116,18 @@ def _write_real_content_fixture(project, monkeypatch) -> str:
     assets = project.active_dir / "工程" / "assets" / "xiaohei-illustrations"
     assets.mkdir(parents=True)
     for index in range(1, 5):
-        (assets / f"scene-{index:02d}.png").write_bytes(PNG + bytes([index]))
+        image = Image.new("RGB", (1920, 1080), "white")
+        draw = ImageDraw.Draw(image)
+        offset = 220 + index * 120
+        draw.ellipse((offset, 280, offset + 150, 430), fill="black")
+        draw.rectangle((offset + 45, 420, offset + 105, 760), fill="black")
+        draw.line((offset + 75, 520, offset + 330, 420), fill="#c4472d", width=24)
+        image.save(assets / f"scene-{index:02d}.png", format="PNG")
     candidate = _candidate(project.active_dir)
     candidate_path = project.active_dir / "工程" / "content-plan.candidate.json"
     candidate_path.write_text(json.dumps(candidate, ensure_ascii=False), encoding="utf-8")
     compile_content_plan(project_root=project.active_dir, candidate_path=candidate_path)
-    word_times = ((0.2, 1.0), (1.4, 2.2), (2.6, 3.4), (3.8, 4.6))
+    word_times = ((0.2, 3.2), (4.2, 7.2), (8.2, 11.2), (12.2, 15.2))
     words = [
         {"text": text[0], "start": start, "end": end, "isGap": False}
         for text, (start, end) in zip(segments, word_times)

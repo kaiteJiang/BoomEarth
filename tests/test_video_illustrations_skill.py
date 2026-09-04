@@ -5,6 +5,8 @@ from boomearth.video.illustration_themes import CHINESE_STYLE_CATALOG, THEMES
 ROOT = Path(__file__).parents[1]
 SKILL = ROOT / ".agents/skills/ra-video-illustrations"
 DIRECTOR = ROOT / ".agents/skills/katerj-video-director"
+XIAOHEI = ROOT / ".agents/skills/katerj-xiaohei-illustrations"
+XIAOHUANG = ROOT / ".agents/skills/katerj-xiaohuang-illustrations"
 
 
 def test_video_illustration_skill_declares_native_generation_and_v2_contracts() -> None:
@@ -158,4 +160,61 @@ def test_new_video_default_is_xiaohei_and_profiled_themes_are_explicit_only() ->
     assert "数字人、字幕、标签和轻量图标都不能代替主题场景素材" in delivery
     assert "缺少真实主题素材时必须失败" in delivery
     assert "默认使用 `semantic-handdrawn-v3`（schema 3）" not in director
-    assert "四个 `profiled-illustration-v4` 主题" in library
+    assert "五个 `profiled-illustration-v4` 主题" in library
+
+
+def test_xiaohei_skill_preserves_native_handwritten_text_and_explicit_fallback() -> None:
+    skill = (XIAOHEI / "SKILL.md").read_text(encoding="utf-8")
+
+    for phrase in (
+        "illustration_text_mode: embedded",
+        "text_policy: embedded",
+        "handwritten_labels:",
+        "local-fallback",
+        "原生手写文字",
+        "禁止胶囊标签",
+        "纯白画布",
+        "边缘羽化",
+    ):
+        assert phrase in skill
+    assert "Keep cloud-generated source art text-free" not in skill
+
+
+def test_xiaohuang_skill_preserves_identity_and_native_text() -> None:
+    skill = (XIAOHUANG / "SKILL.md").read_text(encoding="utf-8")
+
+    assert skill.startswith("---\nname: katerj-xiaohuang-illustrations\n")
+    for phrase in (
+        "暖黄不规则种子形身体",
+        "空心爱心天线",
+        "黑色竖椭圆眼",
+        "原生手写中文",
+        "xiaohuang-warm-first-v1",
+        "text_policy: embedded",
+        "禁止系统胶囊标签",
+        "不覆盖旧资产",
+    ):
+        assert phrase in skill
+    for relative in (
+        "references/character-dna.md",
+        "references/prompt-contract.md",
+        "references/qa-checklist.md",
+        "agents/openai.yaml",
+    ):
+        assert (XIAOHUANG / relative).is_file()
+
+
+def test_xiaohei_hyperframes_template_keeps_white_feathered_art_contract() -> None:
+    director_root = ROOT / ".agents/skills/ra-video-production-director"
+    layout = (director_root / "references/xiaohei-16x9-layout.md").read_text(
+        encoding="utf-8"
+    )
+    template = (
+        director_root / "assets/xiaohei-16x9-template/build_index.py"
+    ).read_text(encoding="utf-8")
+
+    assert "native handwritten labels" in layout
+    assert "pure white canvas" in layout
+    assert "edge feather" in layout
+    assert "mask-image:" in template
+    assert "filter: blur" not in template

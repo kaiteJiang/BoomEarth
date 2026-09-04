@@ -77,6 +77,7 @@ def _scene(index: int) -> dict[str, object]:
         "visual_intent": "用小黑人物和本地短标签表现具体动作",
         "visual_asset": f"工程/assets/xiaohei-illustrations/scene-{index:02d}.png",
         "overlay_labels": ["动作主体", "关键结果"],
+        "illustration_text_mode": "embedded",
         "layout_variant": ("standard", "long-title", "wide-visual", "close")[index - 1],
     }
 
@@ -106,6 +107,7 @@ def valid_v2_candidate(project: Path) -> dict[str, object]:
         path = editorial / f"scene-{index:02d}.png"
         path.write_bytes(PNG)
         scene.pop("overlay_labels")
+        scene.pop("illustration_text_mode")
         scene["visual_asset"] = f"工程/assets/editorial-illustrations/scene-{index:02d}.png"
         scene["visual_type"] = types[index - 1]
         scene["visual_style"] = styles[index - 1]
@@ -140,6 +142,7 @@ def valid_v3_candidate(project: Path) -> dict[str, object]:
         "机械底座",
     ]
     for index, scene in enumerate(candidate["scenes"], 1):  # type: ignore[union-attr]
+        scene.pop("illustration_text_mode")
         scene["visual_type"] = types[index - 1]
         scene["visual_style"] = styles[index - 1]
         scene["visual_mode"] = modes[index - 1]
@@ -328,6 +331,28 @@ def test_parse_handoff_segments_uses_only_stable_segment_headings() -> None:
     assert tuple(item.text for item in parsed) == _segments()
 
 
+def test_compile_accepts_presentation_linebreaks_in_narration_contract(
+    project: Path,
+) -> None:
+    batch = project / "工程" / "media" / "segments.jsonl"
+    linebroken = tuple(
+        text.replace("公开", "公开\n").replace("。", "！") for text in _segments()
+    )
+    batch_bytes = b"".join(
+        (json.dumps({"text": text}, ensure_ascii=False) + "\n").encode("utf-8")
+        for text in linebroken
+    )
+    batch.write_bytes(batch_bytes)
+    manifest_path = project / "工程" / "media" / "voice_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["segment_contract_sha256"] = hashlib.sha256(batch_bytes).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = compile_fixture(project, valid_candidate(project))
+
+    assert result.path == (project / "工程" / "content-plan.json").absolute()
+
+
 def test_compile_publishes_one_deterministic_hash_bound_plan(project: Path) -> None:
     result = compile_fixture(project, valid_candidate(project))
 
@@ -345,15 +370,25 @@ def test_compile_publishes_one_deterministic_hash_bound_plan(project: Path) -> N
     assert formal.read_bytes().endswith(b"\n")
 
 
-def test_xiaohei_plan_preserves_required_local_text_layer_labels(project: Path) -> None:
+def test_xiaohei_plan_preserves_native_text_contract(project: Path) -> None:
     candidate = valid_candidate(project)
     candidate["scenes"][0]["overlay_labels"] = ["已完成成果", "末端报错"]
 
     compiled = compile_fixture(project, candidate)
 
     assert compiled.plan.scenes[0].overlay_labels == ("已完成成果", "末端报错")
+    assert compiled.plan.scenes[0].illustration_text_mode == "embedded"
     stored = json.loads(compiled.path.read_text(encoding="utf-8"))
     assert stored["scenes"][0]["overlay_labels"] == ["已完成成果", "末端报错"]
+    assert stored["scenes"][0]["illustration_text_mode"] == "embedded"
+
+
+def test_xiaohei_compile_requires_explicit_text_mode(project: Path) -> None:
+    candidate = valid_candidate(project)
+    candidate["scenes"][0].pop("illustration_text_mode")
+
+    with pytest.raises(ContentPlanError, match="xiaohei text mode is required"):
+        compile_fixture(project, candidate)
 
 
 def test_content_plan_v2_accepts_editorial_fields_without_changing_v1(project: Path) -> None:
@@ -466,7 +501,7 @@ def test_public_handoff_visual_contract_rejects_default_and_skill_drift() -> Non
     with pytest.raises(ContentPlanError, match="public handoff is invalid"):
         parse_handoff_visual_contract(
             _handoff_text().replace(
-                'illustration_skill: "ian-xiaohei-illustrations"',
+                'illustration_skill: "katerj-xiaohei-illustrations"',
                 'illustration_skill: "ra-video-illustrations"',
             )
         )

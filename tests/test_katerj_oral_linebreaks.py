@@ -32,6 +32,15 @@ def test_checker_accepts_closed_short_subtitle_lines() -> None:
     assert checker.analyze_text("先把主题讲清楚\n再给出解决办法", max_cjk=14) == []
 
 
+def test_checker_accepts_complete_action_ending_with_direction_noun() -> None:
+    checker = _load_checker()
+
+    assert checker.analyze_text(
+        "第一稿出来后你改方向\n它继续打磨\n直到这篇内容能代表你",
+        max_cjk=14,
+    ) == []
+
+
 def test_checker_reports_reading_and_closure_failures() -> None:
     checker = _load_checker()
 

@@ -465,6 +465,34 @@ def test_run_publishes_hash_bound_private_repository_snapshot(tmp_path: Path) ->
     assert not transport.responses
 
 
+def test_repository_scope_accepts_readme_only_software_repository(
+    tmp_path: Path,
+) -> None:
+    """A normal software repository must not require a SKILL.md file."""
+
+    _intake(tmp_path)
+    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    approval = _approval(tmp_path)
+    transport = FakeGitHubTransport()
+    responses = list(transport.responses)
+    tree = json.loads(json.dumps(responses[3][2]))
+    tree["tree"] = [tree["tree"][0]]
+    responses[3] = (responses[3][0], responses[3][1], tree, responses[3][3])
+    transport.responses = deque(responses[:5])
+
+    result = run_github_skill_acquisition(
+        tmp_path, WORK_ID, approval, transport=transport
+    )
+
+    manifest = json.loads(result.path.read_text("utf-8"))
+    assert manifest["request_count"] == 5
+    assert [item["path"] for item in manifest["files"]] == ["README.md"]
+    assert manifest["files"][0]["role"] == "root-readme"
+    assert WashEventLedger(tmp_path).status(WORK_ID) == "github_skill_ready"
+    assert len(transport.calls) == 5
+    assert not transport.responses
+
+
 @pytest.mark.parametrize(
     ("request_count", "plan_sha"),
     [(47, None), (48, "0" * 64)],

@@ -211,6 +211,92 @@ def test_caption_grouping_keeps_terms_connectors_and_negation_units_intact() -> 
     assert not any(text.endswith(("但", "但是", "不", "没", "没有", "未")) for text in captions)
 
 
+def test_caption_grouping_keeps_short_complete_clause_before_terminal_condition() -> None:
+    """Would fail if a short complete clause were merged and cut after 直到."""
+
+    module = _load_subtitle_module()
+
+    assert module.split_caption_text(
+        "第一稿出来后，你改方向，它继续打磨，直到这篇内容能代表你。",
+        14,
+    ) == [
+        "第一稿出来后你改方向",
+        "它继续打磨",
+        "直到这篇内容能代表你",
+    ]
+
+
+def test_caption_grouping_never_merges_across_terminal_sentence_boundary() -> None:
+    """Would fail if a short sentence were glued to the next sentence."""
+
+    module = _load_subtitle_module()
+
+    assert module.split_caption_text(
+        "拿不准就标出来，别自己编。以后每写完一篇，就把新文章和新案例继续补进去。",
+        14,
+    ) == [
+        "拿不准就标出来别自己编",
+        "以后每写完一篇",
+        "就把新文章和新案例继续补进去",
+    ]
+
+
+def test_caption_grouping_keeps_complete_preferred_length_clauses_separate() -> None:
+    """Would fail if two readable clauses were packed into one dense caption."""
+
+    module = _load_subtitle_module()
+
+    assert module.split_caption_text(
+        "选题别完全外包，用户会搜什么，取决于真实场景和具体痛点。",
+        14,
+    ) == [
+        "选题别完全外包",
+        "用户会搜什么",
+        "取决于真实场景和具体痛点",
+    ]
+
+
+def test_caption_grouping_allows_protected_english_name_at_cjk_limit() -> None:
+    """Would fail if an intact English name forced an incomplete Chinese cut."""
+
+    module = _load_subtitle_module()
+
+    assert module.split_caption_text(
+        "这张说明卡不会让 AI 突然变聪明，但能让它少猜，写出来更像你的账号。",
+        14,
+    ) == [
+        "这张说明卡不会让 AI 突然变聪明",
+        "但能让它少猜",
+        "写出来更像你的账号",
+    ]
+
+
+def test_caption_timing_rounds_down_to_keep_full_30fps_frame_gap() -> None:
+    """Would fail if millisecond rounding shrank a one-frame gap below 1/30 s."""
+
+    module = _load_subtitle_module()
+    timings = [
+        {"start": 0.00, "end": 0.20},
+        {"start": 0.20, "end": 0.40},
+        {"start": 0.40, "end": 0.70},
+        {"start": 0.70, "end": 0.95},
+        {"start": 1.00, "end": 1.20},
+        {"start": 1.20, "end": 1.40},
+        {"start": 1.40, "end": 1.60},
+        {"start": 1.60, "end": 1.80},
+    ]
+
+    captions = module.build_captions(
+        "第一句话。第二句话。",
+        list(range(8)),
+        timings,
+        14,
+    )
+
+    assert captions[0]["end"] == 0.966
+    assert captions[1]["start"] - captions[0]["end"] >= 1 / 30
+
+
 def test_subtitle_jsonl_script_preserves_order_and_ignores_metadata(
     tmp_path: Path,
 ) -> None:

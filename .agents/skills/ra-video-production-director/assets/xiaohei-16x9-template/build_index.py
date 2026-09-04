@@ -129,11 +129,7 @@ CSS = r"""
         width: 1920px;
         height: 1080px;
         overflow: hidden;
-        background:
-          linear-gradient(90deg, rgba(17,17,17,.032) 2px, transparent 2px),
-          linear-gradient(rgba(17,17,17,.032) 2px, transparent 2px),
-          var(--bg);
-        background-size: 96px 96px;
+        background: var(--bg);
       }
       .scene { position: absolute; inset: 0; padding: 64px 104px 52px; overflow: hidden; }
       .ghost {
@@ -228,7 +224,16 @@ CSS = r"""
         display: grid;
         place-items: center;
       }
-      .xiaohei-art { width: 100%; height: 100%; object-fit: contain; display: block; }
+      .xiaohei-art {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        -webkit-mask-image: radial-gradient(ellipse 96% 94% at center, #000 82%, transparent 100%);
+        mask-image: radial-gradient(ellipse 96% 94% at center, #000 82%, transparent 100%);
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+      }
       .caption {
         position: absolute;
         left: 50%;

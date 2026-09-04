@@ -17,7 +17,7 @@ For queue work, `交接稿.md` frontmatter owns ratio, duration, voice, captions
 
 1. Inspect receipts and actual files. A passing archive is reported, not rendered again.
 2. Write a production note covering scenes, semantic images, layout variants, motion, audio, caption safe zones, avatar, cover, and acceptance evidence.
-3. Generate or qualify one real theme-bound illustration per scene through `katerj-xiaohei-illustrations` or the exact registered visual route. For Xiaohei, bind 2-4 reviewed `overlay_labels` per scene and require them to render inside the illustration frame; page titles and captions do not count as this text layer.
+3. Generate or qualify one real theme-bound illustration per scene through `katerj-xiaohei-illustrations` or the exact registered visual route. New Xiaohei scenes use `illustration_text_mode: embedded`: bind 2-4 reviewed labels into the image prompt and preserve the resulting native handwriting. Local fallback text is exception-only and must never use system pills.
 4. Review the final spoken script with `katerj-oral-linebreaks`, then produce the lossless narration with `katerj-local-tts`; lock its WAV and manifest before subtitles.
 5. Generate six real-timestamp subtitle artifacts with `katerj-audio-subtitles`; require caption QC pass.
 6. When the presenter is enabled, use the locked narration for one approved HeyGen master and composite the configured small lower-left circle. It never substitutes for scene art.
@@ -45,7 +45,7 @@ Image generation, final-audio ASR, and HeyGen are separate exact plans. Each bin
 
 - Final MP4 fully decodes and matches the media contract.
 - Every scene shows a semantically relevant real asset and component-level motion.
-- Every Xiaohei scene shows its required local semantic text layer inside the illustration frame; an empty `.visual-overlay-labels` container fails acceptance.
+- Every new Xiaohei scene shows its reviewed native handwritten labels inside the illustration itself, with no duplicate system label layer. An explicit `local-fallback` must be borderless handwriting and carry its exception evidence.
 - Voice, caption, illustration, and optional avatar provenance pass.
 - Captions align to the final narration and stay outside the avatar/content zones.
 - Contact sheet, key frames, publication manifest, delivery report, and archive path all exist.

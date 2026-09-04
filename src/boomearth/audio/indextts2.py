@@ -747,6 +747,7 @@ def _persist_provenance_ledger(
         str, str | tuple[str, ...]
     ]
     | None = None,
+    retired_voice_ids: frozenset[str] = frozenset(),
 ) -> None:
     """Atomically replace the ledger after its private staging file is flushed."""
     temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
@@ -770,6 +771,11 @@ def _persist_provenance_ledger(
                     if issued_manifest_sha256_by_output_sha256 is not None
                     else {}
                 ),
+                **(
+                    {"retired_voice_ids": sorted(retired_voice_ids)}
+                    if retired_voice_ids
+                    else {}
+                ),
             },
         )
         os.replace(temporary_path, path)
@@ -790,9 +796,15 @@ def _register_provenance_manifest_while_locked(
     manifest_sha256: str,
 ) -> tuple[str, ...]:
     """Atomically register an issued output and its exact manifest while locked."""
-    loaded_hashes, canonical_reference_provenance, loaded_bindings = _load_provenance_ledger_document(
+    (
+        loaded_hashes,
+        canonical_reference_provenance,
+        loaded_bindings,
+        retired_voice_ids,
+    ) = _load_provenance_ledger_document(
         path,
         allow_owned_lock=True,
+        include_retired_voice_ids=True,
     )
     hashes = list(loaded_hashes)
     issued_hash = output_sha256.casefold()
@@ -817,6 +829,7 @@ def _register_provenance_manifest_while_locked(
         hashes,
         canonical_reference_provenance,
         bindings,
+        retired_voice_ids,
     )
     return tuple(hashes)
 
@@ -837,8 +850,12 @@ def authorize_provenance_manifest_reuse(
         raise IndexTTS2ValidationError("provenance ledger could not be registered")
     lock = _acquire_provenance_ledger_lock(path)
     try:
-        hashes, canonical_reference_provenance, loaded_bindings = (
-            _load_provenance_ledger_document(path, allow_owned_lock=True)
+        hashes, canonical_reference_provenance, loaded_bindings, retired_voice_ids = (
+            _load_provenance_ledger_document(
+                path,
+                allow_owned_lock=True,
+                include_retired_voice_ids=True,
+            )
         )
         if issued_hash not in hashes or loaded_bindings is None:
             raise IndexTTS2ValidationError("provenance ledger could not be registered")
@@ -855,6 +872,7 @@ def authorize_provenance_manifest_reuse(
             list(hashes),
             canonical_reference_provenance,
             bindings,
+            retired_voice_ids,
         )
         return accepted
     finally:

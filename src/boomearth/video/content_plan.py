@@ -58,7 +58,7 @@ _SCENE_REQUIRED_FIELDS = {
     "layout_variant",
 }
 _SCENE_OPTIONAL_FIELDS = {"no_visual_reason", "reuse_reason"}
-_V1_SCENE_FIELDS = {"overlay_labels"}
+_V1_SCENE_FIELDS = {"overlay_labels", "illustration_text_mode"}
 _V2_SCENE_FIELDS = {"visual_type", "visual_style"}
 _V3_SCENE_FIELDS = _V2_SCENE_FIELDS | {
     "visual_mode",
@@ -146,6 +146,7 @@ class ContentScene:
     required_visual_evidence: tuple[str, ...] = ()
     forbidden_metaphors: tuple[str, ...] = ()
     overlay_labels: tuple[str, ...] = ()
+    illustration_text_mode: str = "legacy-overlay"
     no_visual_reason: str | None = None
     reuse_reason: str | None = None
     theme_structure: tuple[str, ...] = ()
@@ -195,6 +196,16 @@ def _normalize_segment_text(text: str) -> str:
     return "\n".join(
         line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     ).strip()
+
+
+def _speech_equivalence_text(text: str) -> str:
+    """Bind spoken words while ignoring presentation whitespace and punctuation."""
+
+    return "".join(
+        character
+        for character in _normalize_segment_text(text)
+        if character.isalnum()
+    )
 
 
 def parse_handoff_segments(text: str) -> tuple[HandoffSegment, ...]:
@@ -695,8 +706,8 @@ def validate_content_plan(
         )
     ):
         raise ContentPlanError("handoff visual contract is invalid")
-    handoff_texts = tuple(_normalize_segment_text(item.text) for item in handoff_segments)
-    narration_texts = tuple(_normalize_segment_text(item) for item in narration_segments)
+    handoff_texts = tuple(_speech_equivalence_text(item.text) for item in handoff_segments)
+    narration_texts = tuple(_speech_equivalence_text(item) for item in narration_segments)
     if (
         tuple(item.id for item in handoff_segments)
         != tuple(f"segment-{index:03d}" for index in range(1, len(narration_texts) + 1))
@@ -719,7 +730,9 @@ def validate_content_plan(
         )
         required_version_fields = (
             version_fields
-            if is_v2 or is_v3 or is_v4 or require_xiaohei_text_layer
+            if is_v2 or is_v3 or is_v4
+            else {"overlay_labels"}
+            if require_xiaohei_text_layer
             else set()
         )
         if (
@@ -784,6 +797,7 @@ def validate_content_plan(
         required_visual_evidence: tuple[str, ...] = ()
         forbidden_metaphors: tuple[str, ...] = ()
         overlay_labels: tuple[str, ...] = ()
+        illustration_text_mode = "legacy-overlay"
         theme_structure: tuple[str, ...] = ()
         theme_exceptions: tuple[str, ...] = ()
         if is_v3 or is_v4:
@@ -836,6 +850,13 @@ def validate_content_plan(
             overlay_labels = _overlay_labels(
                 value.get("overlay_labels", []), maximum_count=4
             )
+            raw_text_mode = value.get("illustration_text_mode")
+            if require_xiaohei_text_layer and raw_text_mode is None:
+                raise ContentPlanError("xiaohei text mode is required")
+            if raw_text_mode is not None:
+                if raw_text_mode not in {"embedded", "local-fallback"}:
+                    raise ContentPlanError("xiaohei text mode is invalid")
+                illustration_text_mode = raw_text_mode
             if require_xiaohei_text_layer and not overlay_labels:
                 raise ContentPlanError("xiaohei text layer is required")
         if (is_v3 or is_v4) and visual_mode == "type-led":
@@ -882,6 +903,7 @@ def validate_content_plan(
                 required_visual_evidence=required_visual_evidence,
                 forbidden_metaphors=forbidden_metaphors,
                 overlay_labels=overlay_labels,
+                illustration_text_mode=illustration_text_mode,
                 no_visual_reason=no_visual_reason,
                 reuse_reason=reuse_reason,
                 theme_structure=theme_structure,
@@ -955,6 +977,8 @@ def _plan_dict(plan: ContentPlan) -> dict[str, object]:
             value["overlay_labels"] = list(scene.overlay_labels)
         elif plan.schema_version == 1:
             value["overlay_labels"] = list(scene.overlay_labels)
+            if scene.illustration_text_mode != "legacy-overlay":
+                value["illustration_text_mode"] = scene.illustration_text_mode
         if scene.theme_structure:
             value["theme_structure"] = list(scene.theme_structure)
             value["theme_exceptions"] = list(scene.theme_exceptions)

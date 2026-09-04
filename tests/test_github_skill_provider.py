@@ -266,6 +266,55 @@ def test_skill_frontmatter_is_exact_and_source_safe() -> None:
 
 
 @pytest.mark.parametrize(
+    ("style", "expected"),
+    [
+        (">", "Generate friendly hand-drawn illustrations for practical explanations."),
+        ("|", "Generate friendly hand-drawn illustrations\nfor practical explanations."),
+    ],
+)
+def test_skill_frontmatter_accepts_block_description(
+    style: str, expected: str
+) -> None:
+    descriptor = parse_skill_document(
+        "comic/SKILL.md",
+        "a" * 40,
+        (
+            "---\n"
+            "name: comic\n"
+            f"description: {style}\n"
+            "  Generate friendly hand-drawn illustrations\n"
+            "  for practical explanations.\n"
+            "---\n"
+            "# Body\n"
+        ),
+    )
+
+    assert descriptor.description == expected
+
+
+def test_skill_frontmatter_ignores_inert_nested_metadata() -> None:
+    descriptor = parse_skill_document(
+        "comic/SKILL.md",
+        "a" * 40,
+        (
+            "---\n"
+            "name: comic\n"
+            "description: Explain ideas with hand-drawn scenes\n"
+            "metadata:\n"
+            "  author: example\n"
+            "  version: 1.0.0\n"
+            "---\n"
+            "# Body\n"
+        ),
+    )
+
+    assert (descriptor.name, descriptor.description) == (
+        "comic",
+        "Explain ideas with hand-drawn scenes",
+    )
+
+
+@pytest.mark.parametrize(
     "text",
     [
         "# no frontmatter\n",

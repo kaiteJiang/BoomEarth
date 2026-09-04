@@ -13,9 +13,14 @@ from pathlib import Path
 import pytest
 
 from boomearth.audio.indextts2 import CURRENT_VOICE_ID
+from boomearth.captions.align import align_display_script
+from boomearth.providers.volcengine_asr import ASRWord
 from boomearth.video.content_plan import compile_content_plan
 from boomearth.video.scene_timeline import (
     SceneTimelineError,
+    _equivalent_unmapped_run,
+    _equivalent_unmapped_script_indexes,
+    _is_short_duplicate_noise,
     build_scene_timeline,
     validate_scene_timeline,
 )
@@ -65,6 +70,7 @@ def _candidate(project: Path) -> dict[str, object]:
                 "visual_intent": "用小黑人物和本地短标签表现具体动作",
                 "visual_asset": f"工程/assets/xiaohei-illustrations/scene-{index:02d}.png",
                 "overlay_labels": ["动作主体", "关键结果"],
+                "illustration_text_mode": "embedded",
                 "layout_variant": variants[index - 1],
             }
             for index in range(1, 5)
@@ -112,7 +118,7 @@ def _populate_project(
         "captions: asr-word-timestamps\n"
         "caption_style: anchor-dark\n"
         "visual: xiaohei-white-first-v1\n"
-        "illustration_skill: ian-xiaohei-illustrations\n"
+        "illustration_skill: katerj-xiaohei-illustrations\n"
         f"archive_slug: {project.name.removeprefix('2026-08-13-')}\n"
         "---\n\n"
         f"## 新稿分段\n\n{handoff}\n\n## 分段视觉意图\n\n- 已审核。\n",
@@ -321,6 +327,216 @@ def test_equivalent_ascii_number_normalization_does_not_block_timeline(
     timeline = build_scene_timeline(project_root=project).timeline
 
     assert timeline.alignment_coverage >= 0.90
+
+
+def test_equivalent_ascii_hundreds_normalization_does_not_block_timeline(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "2026-08-13-hundreds-normalization"
+    segments = ("第一段介绍三百 Claude Max。", *SEGMENTS[1:])
+    words = _words()
+    words.insert(1, {"text": "300", "start": 1.51, "end": 1.59, "isGap": False})
+    _populate_project(project, words=words, segments=segments)
+
+    timeline = build_scene_timeline(project_root=project).timeline
+
+    assert timeline.alignment_coverage >= 0.90
+
+
+def test_equivalent_ascii_decimal_normalization_does_not_block_timeline(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "2026-08-29-decimal-normalization"
+    suffix = "这是用于保持高覆盖率的完整解释文本并确保其他所有内容都能稳定正确映射到真实时间位置"
+    segments = (f"第一段介绍一百五十六点四 Claude Max{suffix}。", *SEGMENTS[1:])
+    words = _words()
+    words[1]["end"] = 2.0
+    words.insert(1, {"text": "156.4", "start": 1.51, "end": 1.59, "isGap": False})
+    words.insert(3, {"text": suffix, "start": 2.1, "end": 3.0, "isGap": False})
+    _populate_project(project, words=words, segments=segments)
+
+    timeline = build_scene_timeline(project_root=project).timeline
+
+    assert timeline.alignment_coverage >= 0.90
+
+
+def test_non_equivalent_ascii_decimal_normalization_is_rejected(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "2026-08-29-wrong-decimal-normalization"
+    suffix = "这是用于保持高覆盖率的完整解释文本并确保其他所有内容都能稳定正确映射到真实时间位置"
+    segments = (f"第一段介绍一百五十六点四 Claude Max{suffix}。", *SEGMENTS[1:])
+    words = _words()
+    words[1]["end"] = 2.0
+    words.insert(1, {"text": "156.5", "start": 1.51, "end": 1.59, "isGap": False})
+    words.insert(3, {"text": suffix, "start": 2.1, "end": 3.0, "isGap": False})
+    _populate_project(project, words=words, segments=segments)
+
+    with pytest.raises(SceneTimelineError, match="word alignment is invalid"):
+        build_scene_timeline(project_root=project)
+
+
+def test_equivalent_consecutive_dimension_and_fps_normalization_does_not_block_timeline(
+) -> None:
+    script = "前一九二零乘一零八零三十后"
+    words = (
+        ASRWord(text="前", start=0.0, end=0.1),
+        ASRWord(text="1920×1080", start=0.1, end=0.2),
+        ASRWord(text="30", start=0.2, end=0.3),
+        ASRWord(text="后", start=0.3, end=0.4),
+    )
+    alignment = align_display_script(script, words)
+
+    assert _equivalent_unmapped_run(
+        word_indexes=(1, 2),
+        words=words,
+        alignment=alignment,
+        script=script,
+    )
+    assert _equivalent_unmapped_script_indexes(
+        indexes={1, 2},
+        words=words,
+        alignment=alignment,
+        script=script,
+    ) == {
+        script_index
+        for script_index, word_index in zip(
+            alignment.script_indices, alignment.word_indices
+        )
+        if word_index is None
+    }
+
+
+def test_equivalent_aspect_ratio_normalization_does_not_block_timeline() -> None:
+    script = "前做三比四后"
+    words = (
+        ASRWord(text="前", start=0.0, end=0.1),
+        ASRWord(text="作", start=0.1, end=0.2),
+        ASRWord(text="3:4", start=0.2, end=0.3),
+        ASRWord(text="后", start=0.3, end=0.4),
+    )
+    alignment = align_display_script(script, words)
+
+    assert _equivalent_unmapped_run(
+        word_indexes=(1, 2),
+        words=words,
+        alignment=alignment,
+        script=script,
+    )
+    assert _equivalent_unmapped_script_indexes(
+        indexes={1, 2},
+        words=words,
+        alignment=alignment,
+        script=script,
+    ) == {
+        script_index
+        for script_index, word_index in zip(
+            alignment.script_indices, alignment.word_indices
+        )
+        if word_index is None
+    }
+
+
+def test_equivalent_new_build_provider_substitution_does_not_block_timeline() -> None:
+    script = "前new建后"
+    words = (
+        ASRWord(text="前", start=0.0, end=0.1),
+        ASRWord(text="六", start=0.1, end=0.2),
+        ASRWord(text="键", start=0.2, end=0.3),
+        ASRWord(text="后", start=0.3, end=0.4),
+    )
+    alignment = align_display_script(script, words)
+
+    assert _equivalent_unmapped_run(
+        word_indexes=(1, 2),
+        words=words,
+        alignment=alignment,
+        script=script,
+    )
+
+
+@pytest.mark.parametrize(
+    ("script_token", "asr_token"),
+    [
+        ("再", "在"),
+        ("擦", "插"),
+        ("逐", "主"),
+        ("HeyGen", "黑键"),
+        ("锁", "所"),
+        ("粉", "分"),
+        ("做", "作"),
+    ],
+)
+def test_equivalent_common_asr_substitution_does_not_block_timeline(
+    tmp_path: Path, script_token: str, asr_token: str
+) -> None:
+    project = tmp_path / f"2026-08-13-provider-substitution-{ord(asr_token[0])}"
+    suffix = "这是用于保持高覆盖率的完整解释文本"
+    segments = (f"第一段介绍{script_token} Claude Max{suffix}。", *SEGMENTS[1:])
+    words = _words()
+    words[1]["end"] = 2.0
+    words.insert(1, {"text": asr_token, "start": 1.51, "end": 1.59, "isGap": False})
+    words.insert(3, {"text": suffix, "start": 2.1, "end": 3.0, "isGap": False})
+    for index, text in enumerate(("늬", "샴", "绘", "画", "稿", "件")):
+        words.insert(
+            4 + index,
+            {
+                "text": text,
+                "start": 3.00 + index * 0.08,
+                "end": 3.04 + index * 0.08,
+                "isGap": False,
+            },
+        )
+    words[10]["start"] = 3.48
+    _populate_project(project, words=words, segments=segments)
+
+    timeline = build_scene_timeline(project_root=project).timeline
+
+    assert timeline.alignment_coverage >= 0.90
+
+
+def test_short_adjacent_duplicate_word_does_not_block_timeline(tmp_path: Path) -> None:
+    project = tmp_path / "2026-08-13-short-duplicate"
+    words = _words()
+    words[0] = {"text": "第一段", "start": 0.2, "end": 0.8, "isGap": False}
+    words.insert(1, {"text": "段", "start": 0.81, "end": 0.87, "isGap": False})
+    words.insert(2, {"text": "介绍", "start": 0.88, "end": 1.5, "isGap": False})
+    for index, text in enumerate(("늬", "샴", "绘", "画", "稿", "件")):
+        words.insert(
+            4 + index,
+            {
+                "text": text,
+                "start": 3.00 + index * 0.08,
+                "end": 3.04 + index * 0.08,
+                "isGap": False,
+            },
+        )
+    words[10]["start"] = 3.48
+    _populate_project(project, words=words)
+
+    timeline = build_scene_timeline(project_root=project).timeline
+
+    assert timeline.alignment_coverage >= 0.90
+
+
+def test_short_adjacent_duplicate_word_is_accepted_as_provider_noise() -> None:
+    script = "中段后"
+    words = (
+        ASRWord(text="中", start=0.0, end=0.1),
+        ASRWord(text="段", start=0.1, end=0.16),
+        ASRWord(text="段", start=0.17, end=0.23),
+        ASRWord(text="后", start=0.23, end=0.3),
+    )
+    alignment = align_display_script(script, words)
+    mapped = {index for index in alignment.word_indices if index is not None}
+    unmapped = {index for index in range(len(words)) if index not in mapped}
+
+    assert len(unmapped) == 1
+    assert _is_short_duplicate_noise(
+        word_index=unmapped.pop(),
+        words=words,
+        mapped_word_indexes=mapped,
+    )
 
 
 def test_equivalent_ascii_number_range_normalization_does_not_block_timeline(

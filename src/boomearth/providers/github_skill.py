@@ -276,6 +276,26 @@ def _frontmatter_scalar(value: str) -> str:
     return candidate
 
 
+def _frontmatter_block_scalar(style: str, lines: list[str]) -> str:
+    if style not in {">", ">-", ">+", "|", "|-", "|+"} or not lines:
+        raise ValueError
+    values: list[str] = []
+    for line in lines:
+        if line and (not line[0].isspace() or line[0] == "\t"):
+            raise ValueError
+        values.append(line.strip())
+    candidate = (
+        " ".join(value for value in values if value)
+        if style.startswith(">")
+        else "\n".join(values).strip("\n")
+    )
+    if not candidate or any(
+        ord(character) < 32 and character != "\n" for character in candidate
+    ):
+        raise ValueError
+    return candidate
+
+
 def parse_skill_document(
     path: str, blob_sha: str, text: str
 ) -> GitHubSkillDescriptor:
@@ -298,18 +318,45 @@ def parse_skill_document(
         except ValueError:
             raise ValueError from None
         values: dict[str, str] = {}
-        for line in lines[1:closing]:
+        seen_keys: set[str] = set()
+        frontmatter = lines[1:closing]
+        index = 0
+        while index < len(frontmatter):
+            line = frontmatter[index]
             if not line:
+                index += 1
                 continue
             if line[0].isspace() or ":" not in line:
                 raise ValueError
             key, raw_value = line.split(":", 1)
             if (
                 re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", key) is None
-                or key in values
+                or key in seen_keys
             ):
                 raise ValueError
+            seen_keys.add(key)
+            if key not in {"name", "description"}:
+                index += 1
+                while index < len(frontmatter) and (
+                    not frontmatter[index] or frontmatter[index][0].isspace()
+                ):
+                    if frontmatter[index].startswith("\t"):
+                        raise ValueError
+                    index += 1
+                continue
+            style = raw_value.strip()
+            if key == "description" and style in {">", ">-", ">+", "|", "|-", "|+"}:
+                index += 1
+                block: list[str] = []
+                while index < len(frontmatter) and (
+                    not frontmatter[index] or frontmatter[index][0].isspace()
+                ):
+                    block.append(frontmatter[index])
+                    index += 1
+                values[key] = _frontmatter_block_scalar(style, block)
+                continue
             values[key] = _frontmatter_scalar(raw_value)
+            index += 1
         if not {"name", "description"}.issubset(values):
             raise ValueError
         name = values["name"]

@@ -104,3 +104,5 @@ caption_safe_zone: bottom-150px
 10. 禁止意象、文字、Logo、水印、UI、PPT 页面和无关装饰。
 
 `visual_style`、`visual_theme`、content plan、主题目录、manifest 与 semantic QC 必须使用同一个精确主题 ID。四格主题的第 7 项必须写四个连续节拍；工程手稿的第 7 项必须声明真实实体设备和机械例外，没有则明确写无；蓝黑白板的第 7 项必须写明流程、系统、分组、对比或循环中的一种。
+
+`xiaohuang-warm-first-v1` 是唯一 V4 原生文字例外：frontmatter 使用 `text_policy: embedded`，第 7 项写完整角色身份锚点，第 9 项写 2–4 个精确中文短标签并要求画成原生手写痕迹。renderer 不得再次绘制 `overlay_labels`。其余 V4 主题继续使用 `text_policy: none`。

@@ -38,7 +38,7 @@ from boomearth.workbench.source_ledger import (
 WORK_ID = "00000000-0000-4000-8000-000000000007"
 FIXED_UUID = UUID(WORK_ID)
 REGISTERED_HANDOFF_TARGETS = (
-    ("xiaohei-white-first-v1", "ian-xiaohei-illustrations"),
+    ("xiaohei-white-first-v1", "katerj-xiaohei-illustrations"),
     ("editorial-motion-v2", "ra-video-illustrations"),
     ("semantic-handdrawn-v3", "ra-video-illustrations"),
     ("semantic-handdrawn-v3/type-led", "ra-video-illustrations"),
@@ -46,6 +46,7 @@ REGISTERED_HANDOFF_TARGETS = (
     ("engineering-sketch-explainer", "ra-video-illustrations"),
     ("four-panel-comic-explainer", "ra-video-illustrations"),
     ("blue-black-whiteboard-explainer", "ra-video-illustrations"),
+    ("xiaohuang-warm-first-v1", "ra-video-illustrations"),
 )
 
 
@@ -221,7 +222,7 @@ def _complete_rewrite_work(
         {
             "archive_slug": "source-free-project",
             "duration_target_s": 60,
-            "illustration_skill": "ian-xiaohei-illustrations",
+            "illustration_skill": "katerj-xiaohei-illustrations",
             "platform": "douyin",
             "ratio": ratio,
             "schema_version": 1,
@@ -497,7 +498,7 @@ def _complete_manual_text_rewrite_work(root: Path) -> tuple[Path, Path]:
         {
             "archive_slug": "manual-text-source-free-project",
             "duration_target_s": 60,
-            "illustration_skill": "ian-xiaohei-illustrations",
+            "illustration_skill": "katerj-xiaohei-illustrations",
             "platform": "douyin",
             "ratio": "16:9",
             "schema_version": 1,
@@ -681,7 +682,7 @@ def test_compiler_resolves_default_visual_to_xiaohei(tmp_path: Path) -> None:
         / "交接稿.md"
     ).read_text("utf-8")
     assert 'visual: "xiaohei-white-first-v1"' in handoff
-    assert 'illustration_skill: "ian-xiaohei-illustrations"' in handoff
+    assert 'illustration_skill: "katerj-xiaohei-illustrations"' in handoff
     assert 'visual: "default"' not in handoff
 
 

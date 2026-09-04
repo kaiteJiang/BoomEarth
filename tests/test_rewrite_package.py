@@ -35,6 +35,7 @@ REGISTERED_VISUAL_TARGETS = (
     "engineering-sketch-explainer",
     "four-panel-comic-explainer",
     "blue-black-whiteboard-explainer",
+    "xiaohuang-warm-first-v1",
 )
 
 

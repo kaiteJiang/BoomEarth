@@ -290,6 +290,7 @@ def test_compile_motion_plan_supports_profiled_v4(tmp_path: Path) -> None:
         ("engineering-sketch-explainer", "line-reveal"),
         ("four-panel-comic-explainer", "wipe-right"),
         ("blue-black-whiteboard-explainer", "line-reveal"),
+        ("xiaohuang-warm-first-v1", "scale-settle"),
     ],
 )
 def test_profiled_motion_uses_theme_effect_and_reveals_all_eight_labels(

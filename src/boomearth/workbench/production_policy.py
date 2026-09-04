@@ -147,13 +147,13 @@ def _context(root: Path, work_id: str, active_project: str):
         publication = _strict_json(
             publication_path,
             _ARTICLE_PUBLICATION_KEYS
-            if order.source_kind == "x-article"
+            if order.source_kind in {"x-article", "github-skill"}
             else _PUBLICATION_KEYS,
         )
-        if order.source_kind == "x-article":
+        if order.source_kind in {"x-article", "github-skill"}:
             source_contract_valid = (
                 publication["schema_version"] == 2
-                and publication["source_kind"] == "x-article"
+                and publication["source_kind"] == order.source_kind
                 and isinstance(publication["source_artifact_sha256"], str)
                 and isinstance(publication["source_manifest_sha256"], str)
             )

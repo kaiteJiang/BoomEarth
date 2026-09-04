@@ -75,6 +75,7 @@ _THEME_MOTION_HINT = {
     "engineering-sketch-explainer": "path-reveal",
     "four-panel-comic-explainer": "whole-frame-push",
     "blue-black-whiteboard-explainer": "path-reveal",
+    "xiaohuang-warm-first-v1": "character-push",
 }
 
 
@@ -200,6 +201,7 @@ def _scene_html(
     motion_v4 = getattr(plan, "visual_system", "") == PROFILED_VISUAL_SYSTEM
     theme_id: str | None = None
     motion_hint: str | None = None
+    native_text_theme = False
     if motion_v4:
         try:
             theme = get_theme(getattr(plan, "visual_theme", None))
@@ -207,6 +209,7 @@ def _scene_html(
             raise ContentRenderProjectError("render inputs are invalid") from None
         theme_id = theme.id
         motion_hint = _THEME_MOTION_HINT[theme.id]
+        native_text_theme = "native_labels_correct" in theme.required_qc
     motion_enabled = motion_v2 or motion_v3 or motion_v4 or xiaohei_motion
     component_class = " motion-component" if motion_enabled else ""
     hidden = ' style="opacity:0"' if motion_enabled else ""
@@ -240,6 +243,17 @@ def _scene_html(
             else "xiaohei-illustrations"
         )
         labels = tuple(getattr(scene, "overlay_labels", ()))
+        illustration_text_mode = str(
+            getattr(scene, "illustration_text_mode", "legacy-overlay")
+        )
+        if native_text_theme:
+            illustration_text_mode = "embedded"
+        if xiaohei_motion and illustration_text_mode not in {
+            "embedded",
+            "local-fallback",
+            "legacy-overlay",
+        }:
+            raise ContentRenderProjectError("xiaohei text mode is invalid")
         if xiaohei_motion and not labels:
             raise ContentRenderProjectError("xiaohei text layer is required")
         visual_mode = getattr(scene, "visual_mode", None)
@@ -272,17 +286,35 @@ def _scene_html(
                 f"{label_markup}{connector_markup}</div>"
             )
         elif asset_name is not None:
-            label_markup = "".join(
-                f'<span id="{scene.id}--overlay-label-{index}" '
-                f'class="visual-overlay-label{component_class}" '
-                f'data-motion-target="overlay-label-{index}"{hidden}>'
-                f'{html.escape(str(label), quote=True)}</span>'
-                for index, label in enumerate(labels, 1)
-            )
-            visual = (
-                f'<img src="assets/{asset_root}/{html.escape(asset_name, quote=True)}" alt="" />'
-                f'<div class="visual-overlay-labels">{label_markup}</div>'
-            )
+            if (
+                xiaohei_motion and illustration_text_mode == "embedded"
+            ) or native_text_theme:
+                visual = (
+                    f'<img src="assets/{asset_root}/{html.escape(asset_name, quote=True)}" '
+                    f'class="xiaohei-art-native" alt="" />'
+                )
+            else:
+                label_class = (
+                    "xiaohei-fallback-label"
+                    if xiaohei_motion and illustration_text_mode == "local-fallback"
+                    else "visual-overlay-label"
+                )
+                container_class = (
+                    "xiaohei-fallback-labels"
+                    if xiaohei_motion and illustration_text_mode == "local-fallback"
+                    else "visual-overlay-labels"
+                )
+                label_markup = "".join(
+                    f'<span id="{scene.id}--overlay-label-{index}" '
+                    f'class="{label_class}{component_class}" '
+                    f'data-motion-target="overlay-label-{index}"{hidden}>'
+                    f'{html.escape(str(label), quote=True)}</span>'
+                    for index, label in enumerate(labels, 1)
+                )
+                visual = (
+                    f'<img src="assets/{asset_root}/{html.escape(asset_name, quote=True)}" alt="" />'
+                    f'<div class="{container_class}">{label_markup}</div>'
+                )
         else:
             visual = '<div class="visual-placeholder">留白场景</div>'
         header = (
@@ -303,6 +335,9 @@ def _scene_html(
         )
         blocks.append(
             f'<section id="{scene.id}" class="scene layout-{scene.layout_variant}'
+            f'{" xiaohei-native-text" if xiaohei_motion and illustration_text_mode == "embedded" else ""}'
+            f'{" xiaohuang-native-text" if native_text_theme else ""}'
+            f'{" xiaohei-local-fallback" if xiaohei_motion and illustration_text_mode == "local-fallback" else ""}'
             f'{" motion-v2" if motion_v2 else ""}'
             f'{" motion-v3 visual-system-v3 mode-" + str(visual_mode) if motion_v3 else ""}'
             f'{" motion-v4 visual-system-v4 theme-" + str(theme_id) if motion_v4 else ""}" '
@@ -314,6 +349,7 @@ def _scene_html(
             f'<div id="{scene.id}--kicker" class="kicker{component_class}" data-motion-target="kicker"{hidden}>'
             f'{html.escape(scene.kicker, quote=True)}</div>{notes}</div>'
             f'<div id="{scene.id}--visual" class="visual-frame{component_class}" data-motion-target="visual" '
+            f'data-illustration-text-mode="{html.escape(illustration_text_mode, quote=True)}" '
             f'data-visual-mode="{html.escape(str(visual_mode or "raster"), quote=True)}"{hidden}>{visual}</div></section>'
         )
     return "\n".join(blocks)
@@ -484,6 +520,16 @@ def _xiaohei_component_scenes(plan, timeline) -> tuple[SceneMotion, ...]:
             )
             for index, _note in enumerate(scene.notes, 1)
         )
+        if getattr(scene, "illustration_text_mode", "legacy-overlay") != "embedded":
+            entries.extend(
+                MotionEntry(
+                    f"overlay-label-{index}",
+                    start + 1.12 + (index - 1) * 0.16,
+                    0.24,
+                    "fade-up",
+                )
+                for index, _label in enumerate(scene.overlay_labels, 1)
+            )
         scenes.append(
             SceneMotion(
                 scene.id,

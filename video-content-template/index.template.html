@@ -9,12 +9,15 @@
       @font-face { font-family: "SimSun"; src: local("SimSun"); }
       @font-face { font-family: "STSong"; src: local("STSong"); }
       @font-face { font-family: "STHeiti Medium"; src: local("STHeiti Medium"); }
+      @font-face { font-family: "KaiTi"; src: local("KaiTi"); }
+      :root { --xiaohei-canvas-bg: #fff; --xiaohei-edge-feather: 24px; }
       * { box-sizing: border-box; }
       html, body { width: 1920px; height: 1080px; margin: 0; overflow: hidden; background: #f7f1e7; }
       body { color: #17130f; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
       #boomearth-content-production { position: relative; isolation: isolate; width: 1920px; height: 1080px; overflow: hidden; background: #f7f1e7; }
       .perspective-grid-video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
       .scene { position: absolute; inset: 0; z-index: 1; opacity: 0; background: linear-gradient(90deg, rgba(247, 241, 231, .98) 0%, rgba(247, 241, 231, .94) 43%, rgba(247, 241, 231, .76) 72%, rgba(247, 241, 231, .62) 100%); }
+      .scene.xiaohei-native-text, .scene.xiaohei-local-fallback { background: var(--xiaohei-canvas-bg); }
       .scene:first-child { opacity: 1; }
       .chapter { position: absolute; left: 104px; top: 92px; font-size: 28px; font-weight: 800; letter-spacing: .08em; color: #2c63a3; }
       .progress { margin-left: 18px; color: #17130f; }
@@ -29,12 +32,17 @@
       .note-label { font-weight: 900; }
       .visual-frame { position: absolute; right: 72px; top: 264px; width: 972px; height: 547px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
       .visual-frame img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .xiaohei-native-text .visual-frame img, .xiaohei-local-fallback .visual-frame img, .xiaohuang-native-text .visual-frame img { -webkit-mask-image: radial-gradient(ellipse 96% 94% at center, #000 82%, transparent 100%); mask-image: radial-gradient(ellipse 96% 94% at center, #000 82%, transparent 100%); -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
       .visual-system-v3 .visual-frame { border: 3px solid rgba(23, 19, 15, .92); border-radius: 28px; background: rgba(255, 252, 245, .94); box-shadow: 12px 12px 0 rgba(216, 203, 184, .8); }
       .visual-system-v3 .visual-frame img { width: 100%; height: 100%; object-fit: cover; }
       .visual-overlay-labels { position: absolute; inset: 0; bottom: 150px; pointer-events: none; }
       .visual-overlay-label { position: relative; display: inline-flex; margin: 26px 0 0 26px; padding: 10px 18px; border: 2px solid #17130f; border-radius: 999px; background: #fffaf1; box-shadow: 5px 5px 0 #d8cbb8; font-size: 25px; font-weight: 900; }
       .visual-overlay-label:nth-child(2n) { background: #d9e8f5; }
       .visual-overlay-label:nth-child(3n) { background: #f2dfca; }
+      .xiaohei-fallback-labels { position: absolute; inset: var(--xiaohei-edge-feather); bottom: 150px; pointer-events: none; }
+      .xiaohei-fallback-label { position: relative; display: inline-block; margin: 34px 18px 0 34px; color: #17130f; font-family: KaiTi, SimSun, serif; font-size: 31px; font-weight: 800; line-height: 1.1; transform: rotate(-2deg); text-shadow: 0 2px 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, -2px 0 0 #fff; }
+      .xiaohei-fallback-label:nth-child(2n) { color: #c4472d; transform: rotate(2deg); }
+      .xiaohei-fallback-label:nth-child(3n) { color: #2c63a3; transform: rotate(-1deg); }
       .type-led-layout { position: relative; width: 100%; height: 100%; padding: 64px 72px 170px; display: grid; align-content: center; gap: 34px; }
       .type-led-label { position: relative; z-index: 2; display: flex; min-height: 112px; align-items: center; justify-content: center; padding: 22px 34px; border: 3px solid #17130f; border-radius: 24px; background: #fffaf1; box-shadow: 8px 8px 0 #d8cbb8; font-family: SimSun, STSong, serif; font-size: 46px; font-weight: 900; text-align: center; }
       .type-led-comparison { grid-template-columns: 1fr 1fr; }

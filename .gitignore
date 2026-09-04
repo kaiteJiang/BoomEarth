@@ -16,6 +16,8 @@ __pycache__/
 .venv/
 node_modules/
 .hyperframes/
+/.tmp/
+/punk-assets/
 
 # Generated workbench state and private source material
 /runtime/

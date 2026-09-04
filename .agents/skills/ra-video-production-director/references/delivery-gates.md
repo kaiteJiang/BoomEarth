@@ -380,6 +380,13 @@ historical `xiaohei-white-first-v1` system, the video is not complete until thes
   `assets/xiaohei-illustrations/`
 - the render loads those image files directly; CSS/HTML drawings or generic
   hand-coded figures are not accepted as substitutes
+- new Xiaohei scenes use `illustration_text_mode: embedded`; their reviewed
+  short Chinese labels are native handwriting inside the raster, not automatic
+  system pills or cards
+- `local-fallback` is accepted only as an explicit exception and must render as
+  borderless handwriting; it must not duplicate text already present in the art
+- the Xiaohei scene uses a pure white canvas and feathered raster edges; full-image
+  blur that softens the character or handwritten text fails QC
 - a contact sheet shows the Xiaohei assets in the final rendered scenes
 - the project note records the asset list and the selected final MP4 path
 

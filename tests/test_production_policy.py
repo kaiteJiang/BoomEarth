@@ -15,6 +15,7 @@ from boomearth.workbench.production_policy import (
     apply_horizontal_production_policy,
     verify_horizontal_production_policy,
 )
+from boomearth.workbench.rewrite_package import prepare_rewrite_brief
 from boomearth.workbench.source_artifacts import (
     SourceContractError,
     canonical_json_bytes,
@@ -27,11 +28,17 @@ from test_source_handoff_compiler import (
     _complete_rewrite_work,
     _work_root,
 )
+from test_github_skill_rewrite import (
+    WORK_ID as GITHUB_SKILL_WORK_ID,
+    _candidate_and_review as _github_skill_candidate_and_review,
+    _github_ready,
+)
 
 
 SLUG = "source-free-project"
 ARTICLE_SLUG = "article-source-free-project"
 DATED_ARTICLE_PROJECT = f"2026-08-14-{ARTICLE_SLUG}"
+GITHUB_SKILL_SLUG = "github-skill-source-free"
 RECEIPT_KEYS = {
     "handoff_after_sha256",
     "handoff_before_sha256",
@@ -129,6 +136,43 @@ def test_apply_accepts_x_article_publication_receipt(tmp_path: Path) -> None:
     assert result.status == "applied"
     assert result.handoff_sha256 == sha256_file(handoff)
     assert WashEventLedger(tmp_path).status(WORK_ID) == "production_started"
+
+
+def test_apply_accepts_github_skill_publication_receipt(tmp_path: Path) -> None:
+    private_root = _github_ready(tmp_path)
+    prepare_rewrite_brief(
+        tmp_path,
+        GITHUB_SKILL_WORK_ID,
+        platform="douyin",
+        duration_target_s=75,
+        archive_slug=GITHUB_SKILL_SLUG,
+    )
+    candidate, review = _github_skill_candidate_and_review(private_root)
+    compile_source_handoff(tmp_path, GITHUB_SKILL_WORK_ID, candidate, review)
+    paths = WorkbenchPaths(tmp_path)
+    pending = paths.pending / GITHUB_SKILL_SLUG
+    active = paths.active / GITHUB_SKILL_SLUG
+    paths.active.mkdir(parents=True, exist_ok=True)
+    os.rename(pending, active)
+    handoff = active / "交接稿.md"
+    handoff.write_text(
+        handoff.read_text("utf-8").replace(
+            'status: "待制作"', 'status: "制作中"', 1
+        ),
+        encoding="utf-8",
+        newline="",
+    )
+
+    result = apply_horizontal_production_policy(
+        tmp_path, GITHUB_SKILL_WORK_ID, GITHUB_SKILL_SLUG
+    )
+
+    assert result.status == "applied"
+    assert result.handoff_sha256 == sha256_file(handoff)
+    assert (
+        WashEventLedger(tmp_path).status(GITHUB_SKILL_WORK_ID)
+        == "production_started"
+    )
 
 
 def test_apply_accepts_dated_active_project_for_undated_article_slug(

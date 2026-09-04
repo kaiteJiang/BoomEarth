@@ -117,6 +117,26 @@ _THEME_VALUES = (
             }
         ),
     ),
+    IllustrationTheme(
+        id="xiaohuang-warm-first-v1",
+        chinese_name="小黄温度插画",
+        invocation=(
+            "这条视频使用小黄温度插画风格，让固定暖黄色角色用动作和原生手写中文解释文案。"
+        ),
+        directory="xiaohuang-warm-first-v1",
+        prompt_style=(
+            "warm-white-hand-drawn-xiaohuang-character-with-native-chinese-labels"
+        ),
+        required_qc=frozenset(
+            {
+                "xiaohuang_identity_consistent",
+                "character_performs_action",
+                "native_labels_correct",
+                "warm_white_canvas",
+                "not_system_label_overlay",
+            }
+        ),
+    ),
 )
 
 THEMES: Mapping[str, IllustrationTheme] = MappingProxyType(
@@ -176,7 +196,7 @@ def resolve_visual_style(requested: object) -> ResolvedVisualStyle:
             1,
             "xiaohei-white-first-v1",
             None,
-            "ian-xiaohei-illustrations",
+            "katerj-xiaohei-illustrations",
         ),
         "editorial-motion-v2": (
             2,

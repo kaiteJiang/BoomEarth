@@ -92,6 +92,9 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
     }
     for scene in plan.scenes:
         prompt = prompts / f"{scene.id}.md"
+        text_policy = (
+            "embedded" if theme_id == "xiaohuang-warm-first-v1" else "none"
+        )
         prompt_payload = (
             "---\n"
             f"scene_id: {scene.id}\n"
@@ -102,7 +105,7 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
             f"visual_theme: {theme_id}\n"
             "ratio: 16:9\n"
             "target_size: 3840x2160\n"
-            "text_policy: none\n"
+            f"text_policy: {text_policy}\n"
             "caption_safe_zone: bottom-150px\n"
             "---\n\n"
             + "\n".join(

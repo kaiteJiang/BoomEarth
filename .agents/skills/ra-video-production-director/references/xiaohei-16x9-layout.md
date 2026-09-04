@@ -5,6 +5,11 @@ Use this reference for white-first page-based Xiaohei explainers rendered in
 stuck too high while the left note card drops too low, and a page that looks
 clean on desktop but becomes too small on a phone screen.
 
+New scenes use a pure white canvas and preserve the Xiaohei asset's native
+handwritten labels. Use an edge feather on the raster boundary so the art merges
+into the page; never replace correct native text with system pills, and never
+use full-image blur to hide a rectangular edge.
+
 The default typography scale is `mobile-readable`. Use the smaller
 `desktop-compact` scale only for explicit desktop demos, projection,
 course-screen playback, or similarly large-screen viewing.
@@ -105,6 +110,8 @@ Reject the preview when any of these are true:
   a clear bottom margin
 - bottom of the page feels crowded while the middle feels empty
 - repeated template leaves persistent useless blank zones
+- native handwritten labels are missing, duplicated, or replaced by system pills
+- the raster edge is visibly rectangular instead of merging through edge feather
 
 ## Template Asset
 
