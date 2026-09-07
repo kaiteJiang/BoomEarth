@@ -90,6 +90,45 @@ def test_parse_basic_article_preserves_blocks_and_deterministic_markdown() -> No
     assert render_article_markdown(value) == expected
 
 
+def test_parse_preserves_first_level_heading_and_multiline_quote() -> None:
+    payload = (FIXTURES / "article-basic.html").read_bytes()
+    payload = payload.replace(b'type:"header-two"', b'type:"header-one"')
+    payload = payload.replace(b'type:"unstyled"', b'type:"blockquote"')
+    value = article_json_value(parse_x_article_html(payload, CANONICAL), {})
+    assert value["blocks"][1] == {
+        "type": "heading", "level": 1, "text": "A useful heading"
+    }
+    assert value["blocks"][-1] == {
+        "type": "blockquote", "text": "Line one\nLine two"
+    }
+    markdown = render_article_markdown(value).decode("utf-8")
+    assert "\n# A useful heading\n" in markdown
+    assert "> Line one\n> Line two\n" in markdown
+
+
+def test_parse_divider_and_embedded_post_without_crossing_entity_boundaries() -> None:
+    payload = '''<h1>References</h1><script>
+content_state:blocks:0":$R[1]={__typename:"DraftJsBlock",key:"a",text:" ",type:"atomic"}
+content_state:blocks:1":$R[2]={__typename:"DraftJsBlock",key:"b",text:" ",type:"atomic"}
+content_state:blocks:0:entity_ranges:0":$R[3]={__typename:"DraftJsEntityRange",key:7,length:1,offset:0}
+content_state:blocks:1:entity_ranges:0":$R[4]={__typename:"DraftJsEntityRange",key:8,length:1,offset:0}
+content_state:entity_map:0":$R[5]={__typename:"DraftJsEntityMap",key:"7",value:null}
+content_state:entity_map:1":$R[6]={__typename:"DraftJsEntityMap",key:"8",value:null}
+content_state:entity_map:0:value":$R[7]={__typename:"DraftJsEntity",type:"DIVIDER"}
+content_state:entity_map:1:value":$R[8]={__typename:"DraftJsEntity",type:"TWEET"}
+content_state:entity_map:0:value:data":$R[9]={__typename:"DraftJsEntityData",tweet_id:null},content_state:entity_map:1:value:data":$R[10]={__typename:"DraftJsEntityData",tweet_id:"123456789"}
+</script>'''.encode()
+    value = article_json_value(parse_x_article_html(payload, CANONICAL), {})
+    assert value["blocks"] == [
+        {"type": "divider"}, {"type": "embedded-post", "post_id": "123456789"}
+    ]
+    markdown = render_article_markdown(value).decode()
+    assert "\n---\n" in markdown
+    assert "[引用帖子](https://x.com/i/status/123456789)" in markdown
+    with pytest.raises(XArticleProviderError):
+        parse_x_article_html(payload.replace(b'tweet_id:"123456789"', b'tweet_id:null'), CANONICAL)
+
+
 def test_parse_code_and_repeated_media_preserves_order_and_deduplicates_assets() -> None:
     document = parse_x_article_html(
         (FIXTURES / "article-code-images.html").read_bytes(), CANONICAL

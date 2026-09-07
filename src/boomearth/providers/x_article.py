@@ -44,6 +44,10 @@ _ENTITY_MEDIA_RE = re.compile(
     r'content_state:entity_map:(\d+):value:data:media_items:\d+"[^\n]*?'
     r'__typename:"ArticleMediaKey",media_id:"([^"]+)"'
 )
+_ENTITY_TWEET_RE = re.compile(
+    r'content_state:entity_map:(\d+):value:data"[^}]*?'
+    r'__typename:"DraftJsEntityData",[^}]*?tweet_id:"([0-9]+)"'
+)
 _API_MEDIA_RE = re.compile(
     r'original_img_url:"(https://pbs\.twimg\.com/media/[^"<]+)"'
 )
@@ -143,7 +147,11 @@ class XArticleTransport:
                 canonical,
                 headers={
                     "accept": "text/html,application/xhtml+xml",
-                    "user-agent": "BoomEarth-XArticle/1.0",
+                    "user-agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/126.0.0.0 Safari/537.36"
+                    ),
                 },
                 follow_redirects=False,
             ) as response:
@@ -333,6 +341,9 @@ def parse_x_article_html(payload: bytes, canonical_url: str) -> XArticleDocument
     entity_media = {
         int(match.group(1)): match.group(2) for match in _ENTITY_MEDIA_RE.finditer(html)
     }
+    entity_tweets = {
+        int(match.group(1)): match.group(2) for match in _ENTITY_TWEET_RE.finditer(html)
+    }
     api_urls = _api_media_urls(html)
 
     blocks: list[XArticleBlock] = []
@@ -342,10 +353,16 @@ def parse_x_article_html(payload: bytes, canonical_url: str) -> XArticleDocument
         if block_type == "unstyled":
             if text.strip():
                 blocks.append(XArticleBlock(type="paragraph", text=text))
-        elif block_type == "header-two":
+        elif block_type in {"header-one", "header-two"}:
             if not text.strip():
                 raise XArticleProviderError("x-article-structure-unsupported")
-            blocks.append(XArticleBlock(type="heading", level=2, text=text))
+            blocks.append(XArticleBlock(
+                type="heading", level=1 if block_type == "header-one" else 2, text=text
+            ))
+        elif block_type == "blockquote":
+            if not text.strip():
+                raise XArticleProviderError("x-article-structure-unsupported")
+            blocks.append(XArticleBlock(type="blockquote", text=text))
         elif block_type == "ordered-list-item":
             if not text.strip():
                 raise XArticleProviderError("x-article-structure-unsupported")
@@ -356,7 +373,14 @@ def parse_x_article_html(payload: bytes, canonical_url: str) -> XArticleDocument
             if entity_index is None:
                 raise XArticleProviderError("x-article-structure-unsupported")
             entity_type = entity_types.get(entity_index)
-            if entity_type == "MARKDOWN":
+            if entity_type == "DIVIDER":
+                blocks.append(XArticleBlock(type="divider"))
+            elif entity_type == "TWEET":
+                tweet_id = entity_tweets.get(entity_index)
+                if tweet_id is None:
+                    raise XArticleProviderError("x-article-structure-unsupported")
+                blocks.append(XArticleBlock(type="embedded-post", text=tweet_id))
+            elif entity_type == "MARKDOWN":
                 markdown = entity_markdown.get(entity_index)
                 if not markdown:
                     raise XArticleProviderError("x-article-structure-unsupported")
@@ -398,6 +422,12 @@ def article_json_value(
     for block in document.blocks:
         if block.type == "paragraph":
             blocks.append({"type": "paragraph", "text": block.text})
+        elif block.type == "blockquote":
+            blocks.append({"type": "blockquote", "text": block.text})
+        elif block.type == "divider":
+            blocks.append({"type": "divider"})
+        elif block.type == "embedded-post":
+            blocks.append({"type": "embedded-post", "post_id": block.text})
         elif block.type == "heading":
             blocks.append({"type": "heading", "level": block.level, "text": block.text})
         elif block.type == "ordered-list-item":
@@ -451,8 +481,14 @@ def render_article_markdown(value: Mapping[str, object]) -> bytes:
                 in_list = False
             if block_type == "paragraph" and isinstance(block.get("text"), str):
                 output += f'{block["text"]}\n\n'
-            elif block_type == "heading" and block.get("level") == 2 and isinstance(block.get("text"), str):
-                output += f'## {block["text"]}\n\n'
+            elif block_type == "heading" and type(block.get("level")) is int and block["level"] in {1, 2} and isinstance(block.get("text"), str):
+                output += f'{"#" * block["level"]} {block["text"]}\n\n'
+            elif block_type == "blockquote" and isinstance(block.get("text"), str):
+                output += "\n".join("> " + line for line in block["text"].split("\n")) + "\n\n"
+            elif block_type == "divider":
+                output += "---\n\n"
+            elif block_type == "embedded-post" and isinstance(block.get("post_id"), str) and re.fullmatch(r"[0-9]+", block["post_id"]):
+                output += f'[引用帖子](https://x.com/i/status/{block["post_id"]})\n\n'
             elif block_type == "ordered-list-item" and isinstance(block.get("text"), str):
                 output += f'1. {block["text"]}\n'
                 in_list = True
