@@ -39,6 +39,7 @@ _MOTION_PROFILES = {
     "profiled-illustration-v4": "profiled-illustration-v4",
 }
 _PROFILED_VISUAL_EFFECT = {
+    "sponge-host-handdrawn-v1": "scale-settle",
     "vivid-comic-explainer": "scale-settle",
     "engineering-sketch-explainer": "line-reveal",
     "four-panel-comic-explainer": "wipe-right",

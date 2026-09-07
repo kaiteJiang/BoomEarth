@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "scope": "fullscene-image-quality-review-sample",
+  "width": 1920,
+  "height": 1080,
+  "fps": "30/1",
+  "duration": 32.298005,
+  "full_decode": true,
+  "native_image_dimensions": "1672x941",
+  "image_display": "1440x810",
+  "upscaled": false,
+  "sha256": "5388f3038d6d96a16180aee2c85c0bbbaae4f00774fed5f8a84c3c76635d0d4a",
+  "errors": []
+}

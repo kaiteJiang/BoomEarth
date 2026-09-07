@@ -15,6 +15,7 @@ from boomearth.video.illustration_themes import (
 
 
 EXPECTED_THEMES = {
+    "sponge-host-handdrawn-v1",
     "vivid-comic-explainer",
     "engineering-sketch-explainer",
     "four-panel-comic-explainer",
@@ -23,6 +24,7 @@ EXPECTED_THEMES = {
 }
 
 EXPECTED_QC = {
+    "sponge-host-handdrawn-v1": {"sponge_identity_consistent", "character_performs_action", "native_labels_correct", "white_canvas", "not_system_label_overlay"},
     "vivid-comic-explainer": {
         "character_consistent",
         "expression_supports_claim",
@@ -70,6 +72,7 @@ def test_profiled_theme_registry_is_exact_and_immutable() -> None:
     assert {
         theme.chinese_name for theme in THEMES.values()
     } == {
+        "方块海绵插画",
         "鲜彩漫画讲解",
         "工程手稿图解",
         "四格连环漫画",
@@ -92,6 +95,7 @@ def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
         "编辑动效插画",
         "语义手绘插画",
         "动态文字卡片",
+        "方块海绵插画",
         "鲜彩漫画讲解",
         "工程手稿图解",
         "四格连环漫画",
@@ -105,13 +109,14 @@ def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
         "semantic-handdrawn-v3/type-led",
     ]
     assert [entry.target for entry in CHINESE_STYLE_CATALOG[4:]] == [
+        "sponge-host-handdrawn-v1",
         "vivid-comic-explainer",
         "engineering-sketch-explainer",
         "four-panel-comic-explainer",
         "blue-black-whiteboard-explainer",
         "xiaohuang-warm-first-v1",
     ]
-    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 9
+    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 10
     assert all(entry.invocation.endswith("。") for entry in CHINESE_STYLE_CATALOG)
 
 
@@ -124,17 +129,17 @@ def test_get_theme_fails_closed_for_unknown_or_non_string_ids() -> None:
             get_theme(value)  # type: ignore[arg-type]
 
 
-def test_default_request_resolves_to_xiaohei_contract() -> None:
+def test_default_request_resolves_to_sponge_contract() -> None:
     assert illustration_themes.resolve_visual_style(
         "default"
     ) == illustration_themes.ResolvedVisualStyle(
-        target="xiaohei-white-first-v1",
-        schema_version=1,
-        visual_system="xiaohei-white-first-v1",
-        visual_theme=None,
-        illustration_skill="katerj-xiaohei-illustrations",
+        target="sponge-host-handdrawn-v1",
+        schema_version=4,
+        visual_system="profiled-illustration-v4",
+        visual_theme="sponge-host-handdrawn-v1",
+        illustration_skill="ra-video-illustrations",
     )
-    assert illustration_themes.DEFAULT_VISUAL_TARGET == "xiaohei-white-first-v1"
+    assert illustration_themes.DEFAULT_VISUAL_TARGET == "sponge-host-handdrawn-v1"
 
 
 def test_xiaohuang_request_resolves_to_registered_profiled_theme() -> None:

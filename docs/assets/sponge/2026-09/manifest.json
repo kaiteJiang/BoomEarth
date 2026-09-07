@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "scope": "user-authorized-public-sponge-samples",
+  "files": [
+    {
+      "file": "character-approved.png",
+      "bytes": 2018059,
+      "sha256": "44282976c5788a464fe37a9ae3adb5ac6588e288ab7f0b3cb67f199140496e7b",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "contact-sheet.png",
+      "bytes": 380890,
+      "sha256": "f6779e183a9cd1669c79be55c95b2cf0a20e556d3baf8737e0e6cb9d512cc6b4",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "earlier-props.png",
+      "bytes": 947877,
+      "sha256": "e4a304c4abe36ea763e824ae1eecd32c5d79eac7d73ca360ae5631c38929fa2d",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "fullscene-sample.mp4",
+      "bytes": 1674959,
+      "sha256": "5388f3038d6d96a16180aee2c85c0bbbaae4f00774fed5f8a84c3c76635d0d4a"
+    },
+    {
+      "file": "poster.png",
+      "bytes": 524944,
+      "sha256": "3fc593149dc28e789885a56a2a1dff5a43dd5f8456ba1d6978f2eb8c5ce55273",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "scene-01.png",
+      "bytes": 1244511,
+      "sha256": "729e3bd9d7dea9d0949f6621255765f0d76627206488cff40d5999ea66500a83",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "scene-02.png",
+      "bytes": 976528,
+      "sha256": "91dc4c35563a5a31479bb331487f440d7d9848863574d39a863dc42854f68bdd",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "scene-03.png",
+      "bytes": 1094911,
+      "sha256": "d81b6f97d0d896ea3987d6e384c11bd50e4ca0f562507e9fc0242893c1787fe5",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "scene-04.png",
+      "bytes": 1443634,
+      "sha256": "d5e2b23aaa422f97e9b495b0ccf3e87146b7b0669c612b2b5158f3d43134c2f2",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "file": "tutorial-cover.png",
+      "bytes": 1091194,
+      "sha256": "a7cb3b5db1192b65f1cc7bb03e8fcbfcb41ce70f1d7f9d19b171df83b671ada3",
+      "width": 1983,
+      "height": 793
+    }
+  ]
+}

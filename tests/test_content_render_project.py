@@ -140,7 +140,8 @@ def test_xiaohei_local_fallback_is_explicit_and_uses_handwritten_labels(
     assert "动作主体" in markup
 
 
-def test_xiaohuang_native_text_does_not_render_system_labels(project: Path) -> None:
+@pytest.mark.parametrize("theme_id", ["xiaohuang-warm-first-v1", "sponge-host-handdrawn-v1"])
+def test_xiaohuang_native_text_does_not_render_system_labels(project: Path, theme_id: str) -> None:
     scene = SimpleNamespace(
         id="scene-01",
         chapter="价值",
@@ -157,7 +158,7 @@ def test_xiaohuang_native_text_does_not_render_system_labels(project: Path) -> N
     plan = SimpleNamespace(
         scenes=(scene,),
         visual_system="profiled-illustration-v4",
-        visual_theme="xiaohuang-warm-first-v1",
+        visual_theme=theme_id,
     )
     timeline = SimpleNamespace(
         scenes=(SimpleNamespace(start=0.0, end=3.0),)

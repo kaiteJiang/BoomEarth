@@ -668,7 +668,7 @@ def test_compiler_publishes_opening_contract_v2_without_private_metadata(
     assert "jl-multiplatform-titles" not in handoff
 
 
-def test_compiler_resolves_default_visual_to_xiaohei(tmp_path: Path) -> None:
+def test_compiler_resolves_default_visual_to_sponge(tmp_path: Path) -> None:
     candidate, review = _complete_rewrite_work(tmp_path)
 
     compile_source_handoff(tmp_path, WORK_ID, candidate, review)
@@ -681,8 +681,8 @@ def test_compiler_resolves_default_visual_to_xiaohei(tmp_path: Path) -> None:
         / "source-free-project"
         / "交接稿.md"
     ).read_text("utf-8")
-    assert 'visual: "xiaohei-white-first-v1"' in handoff
-    assert 'illustration_skill: "katerj-xiaohei-illustrations"' in handoff
+    assert 'visual: "sponge-host-handdrawn-v1"' in handoff
+    assert 'illustration_skill: "ra-video-illustrations"' in handoff
     assert 'visual: "default"' not in handoff
 
 

@@ -8,7 +8,7 @@ from typing import Final, Mapping
 
 
 PROFILED_VISUAL_SYSTEM: Final[str] = "profiled-illustration-v4"
-DEFAULT_VISUAL_TARGET: Final[str] = "xiaohei-white-first-v1"
+DEFAULT_VISUAL_TARGET: Final[str] = "sponge-host-handdrawn-v1"
 TYPE_LED_TARGET: Final[str] = "semantic-handdrawn-v3/type-led"
 
 
@@ -43,6 +43,14 @@ class ResolvedVisualStyle:
 
 
 _THEME_VALUES = (
+    IllustrationTheme(
+        id="sponge-host-handdrawn-v1",
+        chinese_name="方块海绵插画",
+        invocation="这条视频使用方块海绵插画风格。",
+        directory="sponge-host-handdrawn-v1",
+        prompt_style="white-hand-drawn-sponge-host-with-native-chinese-labels",
+        required_qc=frozenset({"sponge_identity_consistent", "character_performs_action", "native_labels_correct", "white_canvas", "not_system_label_overlay"}),
+    ),
     IllustrationTheme(
         id="vivid-comic-explainer",
         chinese_name="鲜彩漫画讲解",

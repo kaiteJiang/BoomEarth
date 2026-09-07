@@ -71,6 +71,7 @@ _V5_BACKGROUND_SHA256 = (
     "4aa1d98d5a00d4ce0039e8ec71cdae6fe3ecccfedcfa777ddf583df0489ad4cf"
 )
 _THEME_MOTION_HINT = {
+    "sponge-host-handdrawn-v1": "character-push",
     "vivid-comic-explainer": "character-push",
     "engineering-sketch-explainer": "path-reveal",
     "four-panel-comic-explainer": "whole-frame-push",

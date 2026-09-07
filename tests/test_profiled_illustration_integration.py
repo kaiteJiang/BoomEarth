@@ -93,7 +93,7 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
     for scene in plan.scenes:
         prompt = prompts / f"{scene.id}.md"
         text_policy = (
-            "embedded" if theme_id == "xiaohuang-warm-first-v1" else "none"
+            "embedded" if theme_id in {"xiaohuang-warm-first-v1", "sponge-host-handdrawn-v1"} else "none"
         )
         prompt_payload = (
             "---\n"

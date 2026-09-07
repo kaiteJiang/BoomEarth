@@ -442,8 +442,8 @@ def _v4_prompt_contract(payload: bytes) -> dict[str, str]:
         or values["text_policy"]
         != (
             "embedded"
-            if values["visual_theme"] == "xiaohuang-warm-first-v1"
-            and values["visual_style"] == "xiaohuang-warm-first-v1"
+            if values["visual_theme"] in {"xiaohuang-warm-first-v1", "sponge-host-handdrawn-v1"}
+            and values["visual_style"] == values["visual_theme"]
             else "none"
         )
         or values["caption_safe_zone"] != "bottom-150px"
