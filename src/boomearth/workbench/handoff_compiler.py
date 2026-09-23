@@ -19,6 +19,7 @@ from boomearth.video.illustration_themes import (
 from boomearth.workbench.handoff import validate_public_handoff
 from boomearth.workbench.paths import WorkbenchPaths
 from boomearth.workbench.rewrite_package import (
+    DIRECT_REQUIRED_REVIEWS,
     LEGACY_REQUIRED_REVIEWS,
     PRODUCTION_RATIO,
     REQUIRED_REVIEWS,
@@ -133,6 +134,7 @@ class HandoffCompilerError(RuntimeError):
 
 def _valid_required_reviews(value: object) -> bool:
     return isinstance(value, list) and tuple(value) in {
+        tuple(DIRECT_REQUIRED_REVIEWS),
         tuple(LEGACY_REQUIRED_REVIEWS),
         tuple(REQUIRED_REVIEWS),
     }
@@ -520,6 +522,11 @@ def _validated_rewrite(
         raise HandoffCompilerError("rewrite-production-ratio-invalid")
     if not review.all_passed:
         raise HandoffCompilerError("rewrite-review-not-passed")
+    direct_brief = tuple(brief["required_reviews"]) == DIRECT_REQUIRED_REVIEWS
+    if direct_brief != (review.schema_version == 3) or (
+        direct_brief and candidate.schema_version != 1
+    ):
+        raise HandoffCompilerError("rewrite-review-not-passed")
     if candidate.schema_version == 2 and (
         review.schema_version != 2
         or tuple(name for name, _status in review.reviews) != REQUIRED_REVIEWS
@@ -584,7 +591,9 @@ def _yaml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def render_source_free_handoff(candidate: RewriteCandidate) -> str:
+def render_source_free_handoff(
+    candidate: RewriteCandidate, *, direct_writing: bool = False
+) -> str:
     if not isinstance(candidate, RewriteCandidate):
         raise HandoffCompilerError("rewrite-input-invalid")
     try:
@@ -606,6 +615,8 @@ def render_source_free_handoff(candidate: RewriteCandidate) -> str:
         ("covers", DEFAULT_PUNK_COVER_CONTRACT),
         ("archive_slug", candidate.archive_slug),
     )
+    if direct_writing:
+        frontmatter += (("avatar", "none"),)
     lines = ["---"]
     for key, value in frontmatter:
         lines.append(f"{key}: {value if isinstance(value, int) else _yaml_string(value)}")
@@ -784,7 +795,10 @@ def compile_source_handoff(
     candidate, candidate_sha, review_sha = _validated_rewrite(
         chain, work_id, Path(candidate_path), Path(review_path)
     )
-    rendered = render_source_free_handoff(candidate)
+    rendered = render_source_free_handoff(
+        candidate,
+        direct_writing=tuple(chain.brief["required_reviews"]) == DIRECT_REQUIRED_REVIEWS,
+    )
     if validate_public_handoff(rendered):
         raise HandoffCompilerError("handoff-public-content-invalid")
     try:
@@ -840,7 +854,10 @@ def recover_handoff_receipt(root: Path, work_id: str) -> HandoffPublication:
         )
     except SourceContractError:
         raise HandoffCompilerError("handoff-recovery-invalid") from None
-    expected_text = render_source_free_handoff(candidate)
+    expected_text = render_source_free_handoff(
+        candidate,
+        direct_writing=tuple(chain.brief["required_reviews"]) == DIRECT_REQUIRED_REVIEWS,
+    )
     try:
         if handoff.read_bytes() != expected_text.encode("utf-8"):
             raise ValueError

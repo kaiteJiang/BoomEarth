@@ -43,17 +43,16 @@ def test_github_skill_import_routes_only_through_the_bounded_private_lane() -> N
     for required_boundary in (
         "不安装仓库 Skill",
         "不执行仓库代码",
-        "不读取 Cookie",
-        "不使用 GitHub Token",
-        "不跟随重定向",
-        "不重试",
-        "不切换 Provider",
+        "同一提交",
+        "最多尝试 3 次",
+        "网络请求总预算 288",
+        "不保存响应正文或凭据到日志",
+        "不无限重试",
         "不调用 Paraformer",
         "不调用火山/豆包 ASR",
         "github_skill_ready",
         "UNDECLARED",
         "UNKNOWN",
-        "一次真实采集",
         "ra-洗稿",
     ):
         assert required_boundary in text
@@ -76,8 +75,9 @@ def test_github_skill_import_metadata_and_attribution_are_source_safe() -> None:
 def test_project_docs_register_the_new_skill_without_claiming_live_acceptance() -> None:
     installed = (ROOT / ".agents" / "skills" / "INSTALLED.md").read_text("utf-8")
     readme = (ROOT / "README.md").read_text("utf-8")
+    runbook = (ROOT / "docs" / "VIDEO-PRODUCTION-RUNBOOK.md").read_text("utf-8")
 
     assert "ra-github-skill-import" in installed
-    assert "ra-github-skill-import" in readme
+    assert "ra-github-skill-import" in runbook
     assert "REAL_ACCEPTANCE_PASS" in installed
-    assert "GitHub Skill URL" in readme
+    assert "GitHub" in readme

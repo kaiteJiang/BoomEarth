@@ -155,6 +155,50 @@ def test_parse_code_and_repeated_media_preserves_order_and_deduplicates_assets()
     assert markdown.count("![image-001](images/image-001.jpg)") == 2
 
 
+def test_parse_relay_block_fields_when_text_precedes_key() -> None:
+    payload = (FIXTURES / "article-code-images.html").read_bytes().replace(
+        b'key:"a",text:"Details",type:"header-two"',
+        b'text:"Details",type:"header-two",key:"a"',
+    )
+    document = parse_x_article_html(payload, CANONICAL)
+    assert document.blocks[0].type == "heading"
+    assert document.blocks[0].text == "Details"
+    assert len(document.assets) == 1
+
+
+def test_parse_markdown_table_and_non_image_media_without_dropping_order() -> None:
+    payload = '''<h1>Mixed article</h1><script>
+content_state:blocks:0":$R[1]={__typename:"DraftJsBlock",text:" ",type:"atomic",key:"a"}
+content_state:blocks:1":$R[2]={__typename:"DraftJsBlock",text:" ",type:"atomic",key:"b"}
+content_state:blocks:2":$R[3]={__typename:"DraftJsBlock",text:" ",type:"atomic",key:"c"}
+content_state:blocks:0:entity_ranges:0":$R[4]={__typename:"DraftJsEntityRange",key:1,length:1,offset:0}
+content_state:blocks:1:entity_ranges:0":$R[5]={__typename:"DraftJsEntityRange",key:2,length:1,offset:0}
+content_state:blocks:2:entity_ranges:0":$R[6]={__typename:"DraftJsEntityRange",key:3,length:1,offset:0}
+content_state:entity_map:0":$R[7]={__typename:"DraftJsEntityMap",key:"1",value:null}
+content_state:entity_map:1":$R[8]={__typename:"DraftJsEntityMap",key:"2",value:null}
+content_state:entity_map:2":$R[9]={__typename:"DraftJsEntityMap",key:"3",value:null}
+content_state:entity_map:0:value":$R[10]={__typename:"DraftJsEntity",type:"MARKDOWN"}
+content_state:entity_map:1:value":$R[11]={__typename:"DraftJsEntity",type:"MEDIA"}
+content_state:entity_map:2:value":$R[12]={__typename:"DraftJsEntity",type:"MEDIA"}
+content_state:entity_map:0:value:data":$R[13]={__typename:"DraftJsEntityData",caption:null,markdown:"| A | B |\\n|---|---|"}
+content_state:entity_map:1:value:data:media_items:0":$R[14]={__typename:"ArticleMediaKey",media_id:"123456789"}
+content_state:entity_map:2:value:data:media_items:0":$R[15]={__typename:"ArticleMediaKey",media_id:"987654321"}
+api-gif:$R[16]={__typename:"ApiMedia",media_id:"123456789",media_info:$R[17]={__ref:"gif-info"}}
+gif-info:$R[18]={__typename:"ApiGif"}
+api-video:$R[19]={__typename:"ApiMedia",media_id:"987654321",media_info:$R[20]={__ref:"video-info"}}
+video-info:$R[21]={__typename:"ApiVideo"}
+</script>'''.encode()
+    document = parse_x_article_html(payload, CANONICAL)
+    assert [block.type for block in document.blocks] == ["markdown", "video", "video"]
+    value = article_json_value(document, {})
+    assert value["blocks"][1] == {"type": "video", "media_id": "123456789", "media_type": "gif"}
+    assert value["blocks"][2] == {"type": "video", "media_id": "987654321", "media_type": "video"}
+    markdown = render_article_markdown(value).decode("utf-8")
+    assert "| A | B |\n|---|---|" in markdown
+    assert "[动图素材：未下载]" in markdown
+    assert "[视频素材：未下载]" in markdown
+
+
 @pytest.mark.parametrize(
     "payload",
     [

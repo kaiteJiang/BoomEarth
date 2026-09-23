@@ -233,7 +233,10 @@ def _handoff(slug: str, status: str, *, duration_seconds: float, word_count: int
 
 
 def _run_command(argv: list[str], *, cwd: Path) -> None:
-    result = subprocess.run(argv, cwd=cwd, capture_output=True, check=False, timeout=240)
+    # A six-minute 1080p video has more than 11,000 frames; rendering cannot
+    # share the short timeout used for lint, validation and layout inspection.
+    timeout = 7200 if len(argv) > 2 and argv[2] == "render" else 240
+    result = subprocess.run(argv, cwd=cwd, capture_output=True, check=False, timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError("local-command-failed")
 

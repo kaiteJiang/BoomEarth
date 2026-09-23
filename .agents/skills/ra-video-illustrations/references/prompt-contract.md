@@ -105,4 +105,10 @@ caption_safe_zone: bottom-150px
 
 `visual_style`、`visual_theme`、content plan、主题目录、manifest 与 semantic QC 必须使用同一个精确主题 ID。四格主题的第 7 项必须写四个连续节拍；工程手稿的第 7 项必须声明真实实体设备和机械例外，没有则明确写无；蓝黑白板的第 7 项必须写明流程、系统、分组、对比或循环中的一种。
 
-`xiaohuang-warm-first-v1` 是唯一 V4 原生文字例外：frontmatter 使用 `text_policy: embedded`，第 7 项写完整角色身份锚点，第 9 项写 2–4 个精确中文短标签并要求画成原生手写痕迹。renderer 不得再次绘制 `overlay_labels`。其余 V4 主题继续使用 `text_policy: none`。
+`xiaohuang-warm-first-v1` 和 `sponge-host-handdrawn-v1` 使用 `text_policy: embedded`：第7项写对应角色身份锚点，第9项写2–4个精确短中文及 `handwritten_labels: 标签一 | 标签二`，要求原生手写。第10项禁止页面标题/字幕，不禁止已列出的原生短字。renderer 不重复绘制 overlay_labels，其余V4主题继续 text_policy: none。
+
+## 当前海绵原生尺寸
+
+新海绵 prompt 的 visual_style 与 visual_theme 均为 `sponge-host-handdrawn-v1`，target_size 为 `native-source`；其他 frontmatter 与十段结构不变。该值是保留原生像素的合同标识，不是给生图工具的尺寸字符串。工具请求可指定完整高清16:9，但不能把请求尺寸当实际尺寸；complete保存真实PNG字节和宽高，至少1440×810、16:9容差0.01，显示倍率不超过1。
+
+第5项写纯白全幅语义画面与底部字幕区，不要求旧左侧程序标题区；第7项读取根目录的 video-daheihuang/sponge-ip/DESIGN.md 与批准图身份。只有新海绵允许native-source，既有3840x2160 prompt仍按原绑定验证。无prepare证据的历史样片PNG不能补造生成回执。

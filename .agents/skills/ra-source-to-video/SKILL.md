@@ -1,155 +1,49 @@
 ---
 name: ra-source-to-video
-description: Turn an authorized public link, video URL, local video, audio file, article, X post, or GitHub Skill URL into a finished BoomEarth 16:9 video product. Use when the user drops a URL or media file and asks to 做成视频、二创、洗稿后制作、自动跑完整流程、从链接到成片, including when they provide only the source and expect the established production defaults.
+description: Use when a BoomEarth user asks to make a video from a link, local media, article, GitHub project, pasted script, or to resume an unfinished video in a new conversation.
 ---
 
-# 来源到成片
+# 来源到成片：唯一总入口
 
-Act as the single intake-and-orchestration layer. Reuse the specialized Skills
-below; do not reimplement downloading, rewriting, voice cloning, illustration,
-avatar, subtitle, or rendering logic here.
+先读取根 AGENTS.md、[当前接手手册](../../../docs/VIDEO-PRODUCTION-RUNBOOK.md) 与 [连续制作编排](../../../docs/VIDEO-CONTINUOUS-ORCHESTRATION.md)。本 Skill 只串联专业阶段，不重建架构。新对话无需历史聊天：用户给来源、文稿或项目路径即可从项目文件接手。
 
-## Established defaults
+## 当前默认
 
-- Require the user to own or authorize the supplied source.
-- Produce a new horizontal 16:9 video irrespective of source ratio.
-- Use `xiaohei-white-first-v1` through `katerj-xiaohei-illustrations` when no
-  visual theme is specified. Honor an exact registered theme when specified;
-  never invent a freeform image style or migrate an older project's binding.
-- Use local IndexTTS2 voice `user-indextts2-black-gold-v3` only. Do not use an
-  old recording, generated WAV, system TTS, MiniMax, or any fallback.
-- Default to the configured personal HeyGen Circle Avatar III composition:
-  `headroom_08-circle-lower-left`. Resolve the private default configuration
-  fresh for each job. The avatar is a presenter layer, never a replacement for
-  scene illustrations. Omit it only when the user asks for faceless video.
-- Use `anchor-dark` subtitles: punctuation-free semantic single-line cues. Keep
-  one cue per frame with no coexistence of adjacent cues, and use real
-  final-audio word timestamps. Keep the lower-left avatar clear of the caption
-  panel.
-- Prefer a complete explanatory arc: a source of six minutes or longer normally
-  becomes a 150–180 second production. Include an opening hook and closing
-  takeaway.
+新项目使用 `sponge-host-handdrawn-v1` / schema 4 / `profiled-illustration-v4`，插画入口为 `ra-video-illustrations`；继承小黑本体，仅替换角色 DNA。白底融合、原生手写短字、完整场景、组件动作，不裁设定图放大。已绑定旧项目保持原合同。
 
-## Route the source
+Astra 直接理解并写稿，默认不调用人话、去 AI 味或 AI 指纹改稿 Skill，用户当次明确指定优先。新稿按根 AGENTS.md 调用 `jl-video-intro-outro`，读取其唯一真源加入用户固定开头与结尾；已批准全文不追补、不擅改，断句只调整边界。文稿长度以用户要求和内容闭环为准，软件/Skill 简介没有明确时长时约一分钟；较长深度解读再安排更长篇幅。
 
-| Input | First-stage route |
+默认不使用 HeyGen，也不执行其登录/外观发现。音频为本地 IndexTTS2 黑金 v3 1.12×，字幕为精确最终音频的真实词时间 + anchor-dark 单行；输出1920×1080/30fps/H.264/AAC。视频封面默认3:4 Punk，文章5:2海绵图不是视频封面默认。
+
+## 先恢复，再新建
+
+检查目标项目 production note 的“接手状态”、交接稿、实际文件和哈希。已通过正式交付的归档只读复验并报告；音频/字幕/插画证据有效则复用。只有计划或启动进程不算完成。只有样片与PNG不代表有正式生成回执，不能补造历史证据。
+
+## 来源路由
+
+| 输入 | 第一阶段 |
 | --- | --- |
-| Local video or audio; Bilibili, YouTube, TikTok, or playable video URL | `katerj-video-wash` |
-| X Article or text/image post | `ra-x-article-import`, then `katerj-script-rewrite` |
-| Public GitHub Skill/repository/`SKILL.md` URL | `ra-github-skill-import`, then `katerj-script-rewrite` |
-| Existing BoomEarth queue handoff | `katerj-video-director` directly |
+| 本地视频/音频、可播放 URL、X 原生视频 | katerj-video-wash |
+| X 正文图文 | ra-x-article-import → katerj-script-rewrite |
+| GitHub 仓库/Skill URL | ra-github-skill-import → katerj-script-rewrite；只读，不安装/执行仓库 |
+| 用户直接给文稿/已批准稿 | Astra 按请求写或保留原文 → katerj-video-director；不虚构来源采集 |
+| 已有待制作/制作中项目 | katerj-video-director；先核对锁定合同 |
 
-Do not use `ra-x-article-import` for X native video. Route X native video as a
-video source. Do not download a GitHub repository, install a remote Skill, or
-execute repository code.
+## 制作链
 
-## Resume before external work or rerender
+1. 来源任务建立私有 work item；URL、源媒体、逐字稿、分析与 Provider 响应只在 `视频工作台/.internal/洗稿/<work_id>/`。
+2. 完成对应采集/来源转写。Astra 直接写稿；`katerj-script-rewrite` 负责整理、事实/逻辑/来源隔离/全文一致性证据与 source-free 编译，不串旧去 AI 味工具。来源交接只由 compile_source_handoff.py 发布。
+3. 完整加载 `katerj-video-director` 和它的 routing、delivery-gates。写制作计划、场景及素材/运动合同。
+4. `ra-video-illustrations` 与 `katerj-local-tts` 在合同锁定后并行；本地配音只每 30 分钟检查一次并报告进度。完整 WAV/manifest 验证后，`katerj-audio-subtitles` 用精确音频生成词时间，按 `jl-oral-linebreaks` 及项目本地同义规则分句、执行标点展示合同；`katerj-caption-rendering` 渲染单行字幕。已验收阶段直接复用。
+5. 按最终音频确定场景/组件 cue，走原 canonical finalizer、逐场景 QC、完整解码、check_delivery 与统一归档。
+6. 已声明视频封面时按 `ra-video-cover` 补齐独立封面/QC。不要把封面当成视频场景素材。
 
-Before planning any new external call or expensive rerender, inspect immutable local receipts and actual files. This is a routing decision only: preserve the existing evidence and delegate retrieval, finalization, and rendering mechanics to their owning Skills and local helpers.
+每阶段更新既有 production note 的接手状态：锁定版本/哈希、通过的产物、下一步、失败和私有计划位置提示。不另建并行状态机。
 
-- If a final archive already passes delivery, report it instead of rerendering.
-  A passing archive must be verified and reported, never rerendered. A
-  post-success reporting error first triggers archive verification; do not infer
-  that the completed delivery failed from the reporting error.
-- If a completed provider job has a missing local master, create a separate
-  status/read-plus-one-download retrieval plan. It is a retrieval route, never
-  back to generation, and needs exact retrieval authorization. Speed, deadline,
-  sunk cost, subscription entitlement, or "直接出片" never authorizes retrieval
-  or substitutes for that authorization.
-- If a provider job exists but is incomplete, stop unless a separate exact
-  status-read approval is already bound to that immutable job receipt. A
-  generation approval never authorizes a status read. The status-read approval
-  authorizes one bounded read only; it grants neither completed-job retrieval
-  nor another generation.
-- Keep signed URLs and private IDs in ignored private input/state. Read them
-  through stdin-based local helpers; never place them in command-line arguments
-  or public reports.
-- If a verified local master exists, route it to the canonical content finalizer
-  with optional avatar input. Do not send it through sample/manual composition.
+## 外部阶段与完成
 
-## End-to-end workflow
+本地规划、校验、修复和渲染持续执行；外部采集、来源ASR、生图、最终音频ASR、可选HeyGen与封面使用各自真实输入/计划/预算授权。已覆盖当前动作与预算的授权不重复询问。来源采集失败按连续制作编排分类、修复代码、离线回归并通过新事务继续，不因一次失败停在文稿前；旧计划和回执不可原地改，实际费用/预算不可暗中扩大。每次完整采集成功后把无隐私的修复方法写入来源修复账本，下次先复用最近验证有效的路径。
 
-1. Create or identify the private work item. Keep source URL, provider
-   response, source media, transcript, and source analysis under
-   `视频工作台/.internal/`; never copy them into a public handoff, final archive,
-   Git, or user-facing report.
-2. Run the selected intake route. For video sources, use source intake →
-   provider acquisition → local finalize → Paraformer transcript → rewrite
-   preparation. For X/GitHub sources, complete the dedicated private capture.
-3. Use `katerj-script-rewrite` and its review stack. Every new candidate uses the private
-   schema-2 `opening_contract`: `katerj-video-hook` selects one primary hook type,
-   `jl-multiplatform-titles` binds the title formula, cover hook, spoken first-
-   three-second hook, and proof segments, then `katerj-hook-review` diagnoses execution.
-   Require source-free rewrite to pass humanization, AI-fingerprint, hook,
-   resonance, and title review. For a video source, publish only through
-   `compile_source_handoff.py`; never hand-author a public `待制作` handoff or
-   copy the private opening/review fields into it.
-4. Hand the approved source-free contract to `katerj-video-director`.
-   New source-to-video handoffs declare `covers: punk-cover-giant-title-3x4-v1`. The
-   director owns the production project, canonical content finalizer, scene
-   plan, motion plan, render, checks, and final archive.
-5. Within that route, call specialists in this order: `ra-video-illustrations`
-   or `katerj-xiaohei-illustrations` → `katerj-local-tts` → `katerj-audio-subtitles` → official `heygen-video` (when the
-   presenter is enabled) → local avatar composite → `katerj-caption-rendering` → final
-   render and delivery QC.
-6. Do not burn subtitles before narration is locked. If a cue would wrap,
-   shorten or re-segment it; never permit two lines.
-7. Finish only after the delivery gate passes: final MP4 decodes; 1920×1080,
-   30 fps, H.264/AAC; all planned scenes have real theme-bound visuals; voice,
-   caption, avatar, and illustration provenance pass; contact sheet and key QC
-   frames exist; and the project is archived under `视频工作台/已制作/`.
-8. After final QC and archive verification have passed, route the post-delivery
-   cover to `ra-video-cover`. The default uses `punk-cover` with
-   `giant-perspective-chinese-title` and produces only
-   `封面/作品封面-1080x1440.png` plus `质检/punk-cover-qc.json`; it does not
-   create a homepage preview or platform crop set. This is a separate exact
-   ImageGen approval bound to the immutable cover prompt and plan.
+HeyGen只在明确启用的分支加载官方Skill，并读取导演恢复gate；完成作业缺文件时进入取回而非再生成。默认无人物的项目跳过整条分支。
 
-## External-action gates
-
-Continue through all local planning, validation, editing, and rendering. Stop
-only at a real external side effect without existing exact approval. Present
-one concise, plan-bound request for each:
-
-1. source acquisition or X/GitHub capture;
-2. Paraformer source transcription;
-3. ImageGen scene candidates;
-4. final-audio Volcengine/Doubao ASR;
-5. HeyGen audio/avatar video generation.
-6. one status read for an incomplete provider job.
-7. completed-provider status/read-plus-one-download retrieval.
-
-For status reads and retrieval, make separate approval requests against the
-exact immutable receipt. The incomplete-job request binds one read only; the
-completed-job request binds the intended read plus one download. Neither turns
-into generation authority or substitutes for the other.
-
-The local cover route above is not an ImageGen scene-candidate request. If it
-cannot use qualified existing visuals, let `ra-video-cover` fail closed rather
-than expanding this Skill's approval scope.
-
-Bind each request to the exact private input, SHA-256, provider, request
-budget, no-retry/no-fallback policy, and possible charge. A source-capture
-approval does not authorize downstream providers. On failure, preserve evidence
-and stop; do not silently switch provider.
-
-## Non-negotiable quality rules
-
-- Do not treat generic robots, gears, industrial machines, or unrelated tech
-  imagery as semantic evidence for an AI/tool topic.
-- Do not let text cards or the avatar substitute for required scene images.
-- Do not reduce a multi-minute source to a 50-second summary unless asked.
-- Do not use source captions or estimated segment durations for final timing.
-- Do not disclose credentials, private IDs, source URLs, raw transcripts, or
-  private media paths in public artifacts or status summaries.
-- Preserve prior artifacts. Publish each repair as a new versioned derivative;
-  never overwrite an approved final, transcript, caption set, or QC record.
-
-## Handoff response
-
-At each completed stage, report its result and clickable local artifact links.
-At final delivery, return the final MP4, subtitle artifacts, key QC report and
-frames, confirmed media specs, the five cover/QC artifacts above, and any
-remaining limitation. Do not ask for a style confirmation when the requested or
-default registered theme has already passed its applicable visual contract; ask
-only for a new style, failed semantic QC, or an explicit creative choice.
+最终链接与完成标准见接手手册。缺文件、缺实际多模态QC或仅样片PASS时不称推荐最终成片。

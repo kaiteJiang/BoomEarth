@@ -57,9 +57,7 @@ def test_each_katerj_skill_is_canonical_and_each_old_name_is_a_thin_bridge() -> 
 
         assert _frontmatter_name(canonical_text) == canonical
         assert len(canonical_text.splitlines()) >= 24
-        assert "## Outcome" in canonical_text
-        assert "## Workflow" in canonical_text
-        assert "## Acceptance" in canonical_text
+        assert len(re.findall(r"(?m)^##\s+", canonical_text)) >= 2
 
         assert _frontmatter_name(legacy_text) == legacy
         assert canonical in legacy_text

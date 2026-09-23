@@ -19,6 +19,8 @@ If the input contains no timestamps and is not bound to locked narration, treat 
 
 Read [the boundary rules](references/boundary-rules.md) before changing line breaks.
 
+BoomEarth's external source rule is `C:/Users/1/.codex/skills/jl-oral-linebreaks/SKILL.md` plus its `references/break-rules.md`; read those for a new video and apply the same semantic-closure priority here. The on-screen punctuation contract is separate from spoken copy: internal commas become one space, cue endings keep only question marks. See [continuous orchestration](../../../docs/VIDEO-CONTINUOUS-ORCHESTRATION.md).
+
 ## Workflow
 
 1. Protect product names, English sentences, numbers with units, negation pairs, and core verb-object phrases.
@@ -28,6 +30,8 @@ Read [the boundary rules](references/boundary-rules.md) before changing line bre
 5. Before locking narration, run `python scripts/check_caption_lines.py --file <path> --max-cjk 14`. Fix every reported closure or length issue.
 
 ## Production boundary
+
+In BoomEarth, user-approved narration is already word-locked even before TTS. For that input, only adjust boundaries: the untimed minimal-rewrite permission above does not apply. Preserve the exact approved words, names and CTA choice; use a new approved script version for any substantive correction.
 
 Run this review before TTS whenever possible. After narration is locked, display text must remain alignable to the spoken words. Do not rewrite locked narration merely to improve a caption; use real word timing to choose a safer boundary or stop for an upstream script correction.
 

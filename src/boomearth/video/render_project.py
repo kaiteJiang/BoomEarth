@@ -70,6 +70,7 @@ _V5_BACKGROUND_OUTPUT = Path(
 _V5_BACKGROUND_SHA256 = (
     "4aa1d98d5a00d4ce0039e8ec71cdae6fe3ecccfedcfa777ddf583df0489ad4cf"
 )
+_SPONGE_CURSOR_SOURCE = Path("video-content-template/assets/hand-pencil-cursor.png")
 _THEME_MOTION_HINT = {
     "sponge-host-handdrawn-v1": "character-push",
     "vivid-comic-explainer": "character-push",
@@ -195,6 +196,7 @@ def _scene_html(
     *,
     type_led_contracts: dict[str, dict[str, object]] | None = None,
     xiaohei_motion: bool = False,
+    native_sponge_scenes: frozenset[str] = frozenset(),
 ) -> str:
     blocks: list[str] = []
     motion_v2 = getattr(plan, "visual_system", "") == "editorial-motion-v2"
@@ -287,7 +289,15 @@ def _scene_html(
                 f"{label_markup}{connector_markup}</div>"
             )
         elif asset_name is not None:
-            if (
+            if scene.id in native_sponge_scenes:
+                visual = (
+                    f'<img id="{scene.id}--draw-source" class="sponge-draw-source" '
+                    f'src="assets/{asset_root}/{html.escape(asset_name, quote=True)}" alt="" />'
+                    f'<canvas id="{scene.id}--draw-canvas" class="sponge-draw-canvas"></canvas>'
+                    f'<div id="{scene.id}--pencil-cursor" class="sponge-pencil-cursor">'
+                    f'<img src="assets/hand-pencil-cursor.png" alt="" /></div>'
+                )
+            elif (
                 xiaohei_motion and illustration_text_mode == "embedded"
             ) or native_text_theme:
                 visual = (
@@ -338,6 +348,7 @@ def _scene_html(
             f'<section id="{scene.id}" class="scene layout-{scene.layout_variant}'
             f'{" xiaohei-native-text" if xiaohei_motion and illustration_text_mode == "embedded" else ""}'
             f'{" xiaohuang-native-text" if native_text_theme else ""}'
+            f'{" sponge-native-source" if scene.id in native_sponge_scenes else ""}'
             f'{" xiaohei-local-fallback" if xiaohei_motion and illustration_text_mode == "local-fallback" else ""}'
             f'{" motion-v2" if motion_v2 else ""}'
             f'{" motion-v3 visual-system-v3 mode-" + str(visual_mode) if motion_v3 else ""}'
@@ -356,11 +367,78 @@ def _scene_html(
     return "\n".join(blocks)
 
 
-def _caption_html(captions: tuple[dict[str, object], ...]) -> str:
+def _caption_emphasis(
+    snapshot: FileSnapshot | None,
+    *,
+    captions_snapshot: FileSnapshot,
+    captions: tuple[dict[str, object], ...],
+) -> dict[int, str]:
+    if snapshot is None:
+        return {}
+    value = _strict_json(snapshot, error="render caption emphasis is invalid")
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema_version", "captions_sha256", "highlights"}
+        or isinstance(value["schema_version"], bool)
+        or value["schema_version"] != 1
+        or value["captions_sha256"] != captions_snapshot.sha256
+        or not isinstance(value["highlights"], list)
+    ):
+        raise ContentRenderProjectError("render caption emphasis is invalid")
+    result: dict[int, str] = {}
+    for item in value["highlights"]:
+        if not isinstance(item, dict) or set(item) != {"index", "text"}:
+            raise ContentRenderProjectError("render caption emphasis is invalid")
+        index, phrase = item["index"], item["text"]
+        if (
+            isinstance(index, bool)
+            or not isinstance(index, int)
+            or not 0 <= index < len(captions)
+            or index in result
+            or not isinstance(phrase, str)
+            or not phrase.strip()
+            or len(phrase) > 12
+            or str(captions[index]["text"]).count(phrase) != 1
+        ):
+            raise ContentRenderProjectError("render caption emphasis is invalid")
+        result[index] = phrase
+    return result
+
+
+def _caption_html(
+    captions: tuple[dict[str, object], ...],
+    emphasis: dict[int, str] | None = None,
+) -> str:
+    emphasis = emphasis or {}
+    def panel_style(value: str) -> str:
+        visual_units = sum(
+            1.0 if "\u3400" <= character <= "\u9fff"
+            else 0.58 if character.isascii() and character.isalnum()
+            else 0.35 if character.isspace()
+            else 0.5
+            for character in value
+        )
+        font_size = min(56, int(1400 / max(visual_units, 1)))
+        if font_size < 42:
+            raise ContentRenderProjectError("render caption exceeds one line")
+        return f' style="font-size:{font_size}px"' if font_size < 56 else ""
+
+    def styled_text(index: int, value: str) -> str:
+        phrase = emphasis.get(index)
+        if phrase is None:
+            return html.escape(value, quote=True)
+        prefix, suffix = value.split(phrase, 1)
+        return (
+            html.escape(prefix, quote=True)
+            + '<span class="caption-focus">'
+            + html.escape(phrase, quote=True)
+            + "</span>"
+            + html.escape(suffix, quote=True)
+        )
     return "\n".join(
         f'<div id="caption-{index}" class="caption" data-caption-start="{caption["start"]:.3f}" '
-        f'data-caption-end="{caption["end"]:.3f}"><span class="caption-panel">'
-        f'{html.escape(str(caption["text"]), quote=True)}</span></div>'
+        f'data-caption-end="{caption["end"]:.3f}"><span class="caption-panel"{panel_style(str(caption["text"]))}>'
+        f'{styled_text(index, str(caption["text"]))}</span></div>'
         for index, caption in enumerate(captions)
     )
 
@@ -404,6 +482,7 @@ def _timeline_script(
     *,
     component_scenes: tuple[SceneMotion, ...] = (),
     stable_page_base: bool = False,
+    sponge_native_scenes: frozenset[str] = frozenset(),
 ) -> str:
     scenes = [
         {"id": scene.id, "start": scene.start, "end": scene.end}
@@ -475,9 +554,48 @@ def _timeline_script(
                 motions += (
                     f"tl.to(document.getElementById({element_id}),{{x:{distance},scale:1.02,duration:{scene.ambient.end - scene.ambient.start:.3f},ease:'none'}},{scene.ambient.start:.3f});"
                 )
+    sponge_draw = ""
+    if sponge_native_scenes:
+        draw_ids = json.dumps(sorted(sponge_native_scenes), ensure_ascii=True)
+        sponge_draw = (
+            f"const drawIds=new Set({draw_ids});"
+            "scenes.filter(s=>drawIds.has(s.id)).forEach(function(s){"
+            "const source=document.getElementById(s.id+'--draw-source');"
+            "const canvas=document.getElementById(s.id+'--draw-canvas');"
+            "const cursor=document.getElementById(s.id+'--pencil-cursor');"
+            "const context=canvas.getContext('2d');const state={p:0};const rows=16;"
+            "function paint(){if(!source.complete||!source.naturalWidth)return;"
+            "if(canvas.width!==source.naturalWidth||canvas.height!==source.naturalHeight){"
+            "canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;}"
+            "const w=canvas.width,h=canvas.height,p=Math.max(0,Math.min(1,state.p));"
+            "context.clearRect(0,0,w,h);context.save();context.globalAlpha=.12;"
+            "context.filter='grayscale(1)';context.drawImage(source,0,0,w,h);"
+            "context.restore();const completed=p*rows;"
+            "for(let i=0;i<rows;i++){const part=Math.max(0,Math.min(1,completed-i));"
+            "if(part<=0)continue;const top=Math.round(i*h/rows);"
+            "const bottom=Math.round((i+1)*h/rows);"
+            "const left=i%2?Math.round(w*(1-part)):0;"
+            "const width=i%2?w-left:Math.round(w*part);"
+            "if(width>0)context.drawImage(source,left,top,width,bottom-top,left,top,width,bottom-top);}"
+            "if(p>=1||p<=0){cursor.style.opacity='0';return;}"
+            "const active=Math.min(rows-1,Math.floor(completed));"
+            "const part=completed-active;const x=active%2?1-part:part;"
+            "cursor.style.left=(x*canvas.clientWidth-112)+'px';"
+            "cursor.style.top=(((active+.5)/rows)*canvas.clientHeight-137)+'px';"
+            "cursor.style.opacity='1';}"
+            "source.addEventListener('load',paint);if(source.complete)paint();"
+            "const own=cues.filter(c=>c.start>=s.start-.001&&c.start<s.end-.001);"
+            "if(own.length){const drawing=own.slice(0,Math.max(1,Math.round(own.length*.6)));"
+            "drawing.forEach(function(c,i){"
+            "tl.to(state,{p:(i+1)/drawing.length,duration:Math.max(.08,Math.min(c.end,s.end)-c.start),"
+            "ease:'none',onUpdate:paint,onComplete:paint},c.start);});}"
+            "else{tl.to(state,{p:1,duration:Math.max(.2,Math.min(8,s.end-s.start-.2)),"
+            "ease:'none',onUpdate:paint,onComplete:paint},s.start+.08);}});"
+        )
     return (
         base
         + motions
+        + sponge_draw
         + "cues.forEach(function(c){const el=document.getElementById(c.id);tl.set(el,{opacity:1},c.start);tl.set(el,{opacity:0},c.end+0.0001);});"
         + "window.__timelines['boomearth-content-production']=tl;"
     )
@@ -674,11 +792,22 @@ def prepare_content_render_project(
             )
             for name in _CAPTION_FILES
         }
+        emphasis_path = root / "工程" / "caption-emphasis.json"
+        emphasis_snapshot = (
+            capture_regular_file(emphasis_path, within=root)
+            if emphasis_path.exists() or emphasis_path.is_symlink()
+            else None
+        )
         template = capture_regular_file(
             repository / "video-content-template" / "index.template.html"
         )
         gsap = capture_regular_file(
             repository / "node_modules" / "gsap" / "dist" / "gsap.min.js"
+        )
+        sponge_cursor = (
+            capture_regular_file(repository / _SPONGE_CURSOR_SOURCE, within=repository)
+            if plan_snapshot.plan.visual_theme == "sponge-host-handdrawn-v1"
+            else None
         )
         v5_background = (
             capture_regular_file(repository / _V5_BACKGROUND_SOURCE, within=repository)
@@ -703,6 +832,11 @@ def prepare_content_render_project(
     )
     _caption_qc(
         caption_snapshots["caption-qc.json"], narration_sha256=narration.sha256
+    )
+    caption_emphasis = _caption_emphasis(
+        emphasis_snapshot,
+        captions_snapshot=caption_snapshots["captions.json"],
+        captions=captions,
     )
     asset_snapshots: dict[str, FileSnapshot] = {}
     asset_names: dict[str, str | None] = {}
@@ -734,15 +868,27 @@ def prepare_content_render_project(
         narration,
         manifest,
         *caption_snapshots.values(),
+        *((emphasis_snapshot,) if emphasis_snapshot is not None else ()),
         *asset_snapshots.values(),
         template,
         gsap,
+        *((sponge_cursor,) if sponge_cursor is not None else ()),
         *((v5_background,) if v5_background is not None else ()),
     )
     _after_inputs_captured(snapshots)
     if not all(snapshot_matches(snapshot) for snapshot in snapshots):
         raise ContentRenderProjectError("render input changed")
     xiaohei_motion = plan_snapshot.plan.visual_system == "xiaohei-white-first-v1"
+    native_sponge_scenes = frozenset(
+        asset.scene_id
+        for asset, prompt in zip(
+            illustration_snapshot.manifest.assets,
+            illustration_snapshot.prompt_snapshots,
+            strict=True,
+        )
+        if plan_snapshot.plan.visual_theme == "sponge-host-handdrawn-v1"
+        and b"\ntarget_size: native-source\n" in prompt.payload.replace(b"\r\n", b"\n")
+    ) if illustration_snapshot is not None else frozenset()
     rendered = _render_template(
         template,
         duration=timeline.duration_seconds,
@@ -756,8 +902,9 @@ def prepare_content_render_project(
             asset_names,
             type_led_contracts=_type_led_contract_map(illustration_snapshot),
             xiaohei_motion=xiaohei_motion,
+            native_sponge_scenes=native_sponge_scenes,
         ),
-        captions=_caption_html(captions),
+        captions=_caption_html(captions, caption_emphasis),
         timeline_script=_timeline_script(
             timeline,
             captions,
@@ -768,6 +915,7 @@ def prepare_content_render_project(
                 else ()
             ),
             stable_page_base=xiaohei_motion,
+            sponge_native_scenes=native_sponge_scenes,
         ),
         body_attributes=_profiled_body_attributes(plan_snapshot.plan),
     )
@@ -788,6 +936,8 @@ def prepare_content_render_project(
                 else "xiaohei-illustrations"
             )
         (stage / "assets" / asset_dir).mkdir(parents=True)
+        if sponge_cursor is not None:
+            (stage / "assets" / "hand-pencil-cursor.png").write_bytes(sponge_cursor.payload)
         (stage / "node_modules" / "gsap" / "dist").mkdir(parents=True)
         if v5_background is not None:
             (stage / _V5_BACKGROUND_OUTPUT.parent).mkdir(parents=True)
@@ -796,6 +946,8 @@ def prepare_content_render_project(
         (stage / "media" / "voice_manifest.json").write_bytes(manifest.payload)
         for name, snapshot in caption_snapshots.items():
             (stage / "media" / "captions" / name).write_bytes(snapshot.payload)
+        if emphasis_snapshot is not None:
+            (stage / "caption-emphasis.json").write_bytes(emphasis_snapshot.payload)
         for scene_id, snapshot in asset_snapshots.items():
             name = asset_names[scene_id]
             assert name is not None

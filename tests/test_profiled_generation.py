@@ -300,6 +300,31 @@ def test_two_phase_runtime_native_adaptation_preserves_source_and_publishes_4k(
     )
 
 
+@pytest.mark.parametrize("size", [(1672, 941), (1440, 810), (1280, 720), (1672, 1200)])
+@pytest.mark.parametrize("adapt", [False, True])
+def test_native_sponge_generation_preserves_bytes_or_rejects_small_source(tmp_path: Path, size: tuple[int, int], adapt: bool) -> None:
+    from boomearth.video.profiled_generation import ProfiledGenerationError, complete_profiled_generation_call, prepare_profiled_generation_call
+
+    source = io.BytesIO()
+    Image.new("RGB", size, "white").save(source, format="PNG")
+    ticket = prepare_profiled_generation_call(
+        project_root=tmp_path, theme_id="sponge-host-handdrawn-v1", scene_id="scene-01",
+        prompt_payload=b"---\ntarget_size: native-source\n---\n", candidate_index=1,
+    )
+    args = dict(project_root=tmp_path, theme_id="sponge-host-handdrawn-v1", scene_id="scene-01",
+                candidate_index=1, call_id=ticket.call_id, intent_sha256=ticket.intent_sha256,
+                candidate_payload=source.getvalue(), adapt_runtime_native=adapt)
+    if size in {(1280, 720), (1672, 1200)}:
+        with pytest.raises(ProfiledGenerationError, match="profiled-generation-result-invalid"):
+            complete_profiled_generation_call(**args)
+        return
+    artifact = complete_profiled_generation_call(**args)
+    assert (tmp_path / artifact["path"]).read_bytes() == source.getvalue()
+    receipt = json.loads((tmp_path / artifact["generation_receipt_path"]).read_text(encoding="utf-8"))
+    assert receipt["transform"] == "identity native-source"
+    assert (receipt["source_original_width"], receipt["source_original_height"]) == size
+
+
 def test_runtime_native_adaptation_rejects_sub_720p_or_non_widescreen_source(
     tmp_path: Path,
 ) -> None:

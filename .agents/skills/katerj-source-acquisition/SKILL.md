@@ -22,7 +22,7 @@ Create one verified private source media snapshot and a normalized-audio-ready s
 
 ## Privacy and safety
 
-Keep URL, Cookie, platform IDs, media addresses, source titles, and provider payloads under the ignored work item. A provider failure is evidence, not permission to retry.
+Keep URL, Cookie, platform IDs, media addresses, source titles, and provider payloads under the ignored work item. A provider failure is evidence: diagnose and repair under the [continuous recovery loop](../../../docs/VIDEO-CONTINUOUS-ORCHESTRATION.md), then create a new immutable plan/receipt instead of retrying the failed transaction.
 
 ## Acceptance
 

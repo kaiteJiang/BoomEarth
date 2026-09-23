@@ -59,7 +59,7 @@ def _patch_success_path(module, monkeypatch: pytest.MonkeyPatch, project) -> Non
     timeline = SimpleNamespace(scenes=(object(),), duration_seconds=1.0)
     monkeypatch.setattr(module, "load_production_project", lambda **_kwargs: project)
     monkeypatch.setattr(
-        module, "_content_contract", lambda _project: (timeline, None, "snapshot", None)
+        module, "_content_contract", lambda _project: (timeline, None, "snapshot", None, None)
     )
     monkeypatch.setattr(module, "load_content_plan_snapshot", lambda **_kwargs: object())
     monkeypatch.setattr(module, "_publication_manifest_matches", lambda *_args: True)

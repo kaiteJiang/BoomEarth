@@ -25,7 +25,10 @@ def _load_module():
 
 
 def _current_route() -> TTSRouting:
-    return TTSRouting.load(ROOT / "automation" / "config" / "tts-routing.json")
+    route_path = ROOT / "automation" / "config" / "tts-routing.json"
+    if not route_path.is_file():
+        pytest.skip("private production TTS route is not part of this checkout")
+    return TTSRouting.load(route_path)
 
 
 def _ledger(path: Path) -> bytes:

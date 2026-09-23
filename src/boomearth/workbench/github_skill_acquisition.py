@@ -78,6 +78,7 @@ _FAILURE_STAGES = frozenset(
 _FAILURE_ERRORS = frozenset(
     {
         "github-skill-input-invalid",
+        "github-skill-methods-exhausted",
         "github-skill-not-approved",
         "github-skill-input-changed",
         "github-skill-repository-unavailable",
@@ -168,7 +169,7 @@ class GitHubSkillActionPlan:
     max_file_bytes: int
     max_total_text_bytes: int
     max_path_depth: int
-    allowed_hosts: tuple[str, str]
+    allowed_hosts: tuple[str, ...]
     follow_redirects: bool
     no_retry: bool
     no_fallback: bool
@@ -207,16 +208,16 @@ def _plan_value(plan: GitHubSkillActionPlan) -> dict[str, object]:
     }
 
 
-def _expected_plan(work_id: str, input_sha256: str) -> GitHubSkillActionPlan:
+def _expected_plan(work_id: str, input_sha256: str, *, resilient: bool = True) -> GitHubSkillActionPlan:
     return GitHubSkillActionPlan(
-        schema_version=1,
+        schema_version=2 if resilient else 1,
         work_id=work_id,
-        provider=PROVIDER,
+        provider="github-public-resilient-v2" if resilient else PROVIDER,
         action=ACTION,
         input_sha256=input_sha256,
         network_required=True,
         fee_possible=False,
-        request_budget=REQUEST_BUDGET,
+        request_budget=288 if resilient else REQUEST_BUDGET,
         max_tree_entries=MAX_TREE_ENTRIES,
         max_skill_files=MAX_SKILL_FILES,
         max_markdown_files=MAX_MARKDOWN_FILES,
@@ -224,10 +225,10 @@ def _expected_plan(work_id: str, input_sha256: str) -> GitHubSkillActionPlan:
         max_file_bytes=MAX_FILE_BYTES,
         max_total_text_bytes=MAX_TOTAL_TEXT_BYTES,
         max_path_depth=MAX_PATH_DEPTH,
-        allowed_hosts=ALLOWED_HOSTS,
+        allowed_hosts=ALLOWED_HOSTS + (("github.com",) if resilient else ()),
         follow_redirects=False,
-        no_retry=True,
-        no_fallback=True,
+        no_retry=not resilient,
+        no_fallback=not resilient,
     )
 
 
@@ -272,12 +273,12 @@ def _registered_input(
 
 
 def plan_github_skill_acquisition(
-    root: Path, work_id: str
+    root: Path, work_id: str, *, resilient: bool = True
 ) -> GitHubSkillActionPlan:
     """Publish one immutable offline acquisition plan and planned ledger event."""
 
     _, digest, private_root, _ = _registered_input(Path(root), work_id)
-    plan = _expected_plan(work_id, digest)
+    plan = _expected_plan(work_id, digest, resilient=resilient)
     plan_path = verify_private_relative(
         private_root, "github-skill-acquisition-plan.json"
     )
@@ -330,14 +331,24 @@ def _approved_plan(
         input_sha256 = value.get("input_sha256")
         if not isinstance(input_sha256, str):
             raise SourceContractError("action-plan-invalid")
-        plan = _expected_plan(work_id, input_sha256)
+        plan = _expected_plan(work_id, input_sha256, resilient=value.get("schema_version") == 2)
         if (
             value != _plan_value(plan)
             or sha256_file(plan_path) != current.artifact_sha256
             or plan.input_sha256 != current.source_id
         ):
             raise SourceContractError("action-plan-invalid")
-        verify_approval_payload(value, approval, request_count=REQUEST_BUDGET)
+        if plan.schema_version == 1:
+            verify_approval_payload(value, approval, request_count=REQUEST_BUDGET)
+        else:
+            receipt = json.loads(approval.read_text("utf-8"))
+            expected_receipt = {key: value[key] for key in (
+                "work_id", "provider", "action", "input_sha256", "no_retry", "no_fallback"
+            )}
+            expected_receipt.update(approved=True, request_count=plan.request_budget,
+                plan_sha256=hashlib.sha256(canonical_json_bytes(value)).hexdigest())
+            if receipt != expected_receipt or receipt.get("approved") is not True:
+                raise SourceContractError("approval-scope-mismatch")
     except (
         OSError,
         SourceContractError,
@@ -382,6 +393,8 @@ class _HttpGitHubTransport:
 
     def _get(self, url: str, *, accept: str, limit: int) -> tuple[bytes, int, str]:
         _allowed_url(url)
+        self.last_error = None
+        self.last_status = None
         try:
             with self._client.stream(
                 "GET",
@@ -394,6 +407,7 @@ class _HttpGitHubTransport:
                 },
                 follow_redirects=False,
             ) as response:
+                self.last_status = response.status_code
                 encoding = response.headers.get("content-encoding", "").strip().lower()
                 if encoding not in {"", "identity"}:
                     raise GitHubSkillAcquisitionError(
@@ -421,7 +435,8 @@ class _HttpGitHubTransport:
                 ).split(";", 1)[0].strip().lower()
         except GitHubSkillAcquisitionError:
             raise
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
+            self.last_error = type(exc).__name__
             raise GitHubSkillAcquisitionError(
                 "github-skill-repository-unavailable"
             ) from None
@@ -455,23 +470,29 @@ class _HttpGitHubTransport:
 @dataclass(slots=True)
 class _RequestCounter:
     transport: GitHubSkillTransport
-    count: int = 0
+    logical_count: int = 0
+
+    @property
+    def count(self) -> int:
+        return getattr(self.transport, "request_count", self.logical_count)
 
     def _use(self) -> None:
-        if self.count >= REQUEST_BUDGET:
+        if self.count >= getattr(self.transport, "request_budget", REQUEST_BUDGET):
             raise GitHubSkillAcquisitionError(
                 "github-skill-request-budget-exceeded"
             )
-        self.count += 1
+        self.logical_count += 1
 
     def json(self, url: str) -> tuple[object, int]:
         _allowed_url(url)
         self._use()
         return self.transport.get_json(url)
 
-    def text(self, url: str) -> tuple[bytes, int]:
+    def text(self, url: str, entry: GitTreeEntry | None = None) -> tuple[bytes, int]:
         _allowed_url(url)
         self._use()
+        if entry is not None and hasattr(self.transport, "get_verified_text"):
+            return self.transport.get_verified_text(url, entry)
         return self.transport.get_text(url)
 
 
@@ -652,7 +673,7 @@ def _publish_failure_receipt(
             "request_count": (
                 request_count
                 if isinstance(request_count, int)
-                and 0 <= request_count <= REQUEST_BUDGET
+                and 0 <= request_count <= plan.request_budget
                 else 0
             ),
             "created_at": _timestamp(),
@@ -669,7 +690,7 @@ def run_github_skill_acquisition(
     *,
     transport: GitHubSkillTransport | None = None,
 ) -> ArtifactRecord:
-    """Execute one approved bounded GitHub snapshot without retry or fallback."""
+    """Execute the approved policy; retain legacy single-attempt plans unchanged."""
 
     plan, source, private_root, target = _approved_plan(
         Path(root), work_id, Path(approval)
@@ -683,13 +704,18 @@ def run_github_skill_acquisition(
     manifest_published = False
     completed = False
     interrupted = False
+    resilient_transport = None
     owned_client: httpx.Client | None = None
     requests: _RequestCounter | None = None
     stage = "preflight"
     try:
         if formal_source.exists() or formal_manifest.exists():
             raise GitHubSkillAcquisitionError("github-skill-not-approved")
-        if transport is None:
+        if transport is None and plan.schema_version == 2:
+            from boomearth.workbench.github_resilient_transport import ResilientGitHubTransport
+            resilient_transport = ResilientGitHubTransport(target, private_root, plan.request_budget)
+            active_transport = resilient_transport
+        elif transport is None:
             owned_client = httpx.Client(
                 follow_redirects=False,
                 timeout=httpx.Timeout(
@@ -735,12 +761,21 @@ def run_github_skill_acquisition(
         entry_by_path = {entry.path: entry for entry in entries}
         stage = "selection"
         selected, roles = _initial_selection(target, entries)
+        if plan.schema_version == 2 and target.scope == "repository":
+            for entry in entries:
+                if entry.path not in roles:
+                    roles[entry.path] = "reference"
+                    selected.append(entry.path)
+            if len(selected) > MAX_MARKDOWN_FILES:
+                raise GitHubSkillAcquisitionError("github-skill-request-budget-exceeded")
+            if any(entry_by_path[path].size_bytes > MAX_FILE_BYTES for path in selected):
+                raise GitHubSkillAcquisitionError("github-skill-byte-budget-exceeded")
         documents: dict[str, bytes] = {}
         descriptors: list[GitHubSkillDescriptor] = []
         total_text_bytes = 0
         for path in selected:
             stage = "document-fetch"
-            payload, file_status = requests.text(_raw_url(target, commit, path))
+            payload, file_status = requests.text(_raw_url(target, commit, path), entry_by_path[path])
             if file_status != 200:
                 raise GitHubSkillAcquisitionError(
                     "github-skill-repository-unavailable"
@@ -779,7 +814,7 @@ def run_github_skill_acquisition(
                 roles[path] = "reference"
                 stage = "document-fetch"
                 payload, file_status = requests.text(
-                    _raw_url(target, commit, path)
+                    _raw_url(target, commit, path), entry
                 )
                 if file_status != 200:
                     raise GitHubSkillAcquisitionError(
@@ -829,6 +864,7 @@ def run_github_skill_acquisition(
                 }
             )
         _write_exclusive(staged_source / "repository.md", repository_markdown)
+        _write_exclusive(staged_source / "tree.json", canonical_json_bytes(tree_value))
         manifest_value: dict[str, object] = {
             "schema_version": 1,
             "work_id": work_id,
@@ -937,6 +973,8 @@ def run_github_skill_acquisition(
         interrupted = True
         raise
     finally:
+        if resilient_transport is not None:
+            resilient_transport.close()
         if owned_client is not None:
             owned_client.close()
         if staging is not None and not interrupted:
@@ -978,7 +1016,7 @@ def _recovery_context(
         input_sha256 = value.get("input_sha256")
         if not isinstance(input_sha256, str):
             raise ValueError
-        plan = _expected_plan(work_id, input_sha256)
+        plan = _expected_plan(work_id, input_sha256, resilient=value.get("schema_version") == 2)
         if value != _plan_value(plan):
             raise ValueError
         source = verify_private_relative(private_root, "source-input.txt")
@@ -1042,7 +1080,7 @@ def _valid_private_manifest(
             )
             is None
             or type(value["request_count"]) is not int
-            or not 1 <= value["request_count"] <= REQUEST_BUDGET
+            or not 1 <= value["request_count"] <= plan.request_budget
             or type(value["total_text_bytes"]) is not int
             or not 0 < value["total_text_bytes"] <= MAX_TOTAL_TEXT_BYTES
             or not isinstance(files, list)
@@ -1056,6 +1094,16 @@ def _valid_private_manifest(
             != value["repository_markdown_sha256"]
         ):
             raise ValueError
+        if plan.schema_version == 2:
+            tree_path = source_root / "tree.json"
+            if sha256_file(tree_path) != value["tree_sha256"]:
+                raise ValueError
+            entries = parse_tree_response(json.loads(tree_path.read_text("utf-8")),
+                                          max_entries=MAX_TREE_ENTRIES)
+            if target.scope == "repository" and {e.path for e in entries} != {
+                row["path"] for row in files
+            }:
+                raise ValueError
         seen: set[str] = set()
         total = 0
         for raw in files:
@@ -1093,6 +1141,7 @@ def _valid_private_manifest(
             raise ValueError
         return value
     except (
+        GitHubSkillProviderError,
         KeyError,
         OSError,
         SourceContractError,

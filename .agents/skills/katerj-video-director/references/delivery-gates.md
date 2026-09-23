@@ -1,5 +1,11 @@
 # KaterJ delivery and recovery gates
 
+## Current sponge production
+
+New projects default to sponge-host-handdrawn-v1 and no avatar. Native-source generation must retain PNG bytes and real dimensions, use the formal prepare/complete evidence chain, and fit within its native display size. Check complete native Chinese labels, pure-white edge blending, semantic action and bottom caption clearance in the final MP4; sample-only receipts do not satisfy formal delivery. Do not crop the character model sheet into a sprite or enlarge it.
+
+Resume by verifying approved script, WAV, subtitle and image hashes from the project's production note and receipts; do not repeat validated TTS/ASR/images. Before an archive claim run the canonical finalizer/check_delivery, full decode, media specs, scene/cue frames and contact sheet. Keep 1920×1080/30fps/H.264/AAC and unified 已制作 archive. Read root docs/VIDEO-PRODUCTION-RUNBOOK.md for exact stage ownership and handoff fields.
+
 ## Resume order
 
 Select the highest-evidence state that exists: verified archive, verified project master, completed job without local master, incomplete job, approved generation without job, or no approval.

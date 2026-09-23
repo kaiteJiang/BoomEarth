@@ -58,9 +58,11 @@ _COMMON_ASR_SUBSTITUTIONS = {
     "所": frozenset(("所", "锁")),
     "分": frozenset(("分", "粉")),
     "作": frozenset(("作", "做")),
+    "差": frozenset(("差", "叉")),
 }
 _COMMON_ASR_RUN_SUBSTITUTIONS = {
     ("六", "键"): frozenset(("new建",)),
+    ("绘", "画"): frozenset(("会话",)),
 }
 
 
@@ -254,6 +256,15 @@ def _chinese_integer(value: int) -> str | None:
 
 
 def _number_token_variants(token: str) -> frozenset[str]:
+    percent = re.fullmatch(r"(\d{1,4}(?:\.\d{1,4})?)%", token)
+    if percent is not None:
+        return frozenset(
+            {token}
+            | {
+                f"百分之{value}"
+                for value in _number_token_variants(percent.group(1))
+            }
+        )
     if token.isdigit() and 1 <= len(token) <= 4:
         value = int(token)
         spoken = _chinese_integer(value)
@@ -624,12 +635,36 @@ def _alignment_scenes(
     )
     if unmapped_word_indexes and (
         len(unmapped_word_indexes) > _MAX_UNMAPPED_NOISE_WORDS
-        or any(
-            units > _MAX_UNMAPPED_NOISE_UNITS_PER_WORD
-            for units in unmapped_units
-        )
+        or any(units > _MAX_UNMAPPED_NOISE_UNITS_PER_WORD for units in unmapped_units)
     ):
-        raise SceneTimelineError("word alignment is invalid")
+        # A long, locked TTS narration can contain a small number of ASR
+        # spellings for spoken numbers and model names. Only tolerate them
+        # when the surrounding words still locate the same short script span.
+        if (
+            len(substantive_word_indexes) < 200
+            or len(unmapped_word_indexes) / len(substantive_word_indexes) > 0.015
+            or any(units > 8 for units in unmapped_units)
+        ):
+            raise SceneTimelineError("word alignment is invalid")
+        script_positions: dict[int, list[int]] = {}
+        for script_index, word_index in zip(
+            alignment.script_indices, alignment.word_indices
+        ):
+            if word_index is not None:
+                script_positions.setdefault(word_index, []).append(script_index)
+        for word_index in unmapped_word_indexes:
+            before = max((index for index in script_positions if index < word_index), default=None)
+            after = min((index for index in script_positions if index > word_index), default=None)
+            if before is None or after is None:
+                raise SceneTimelineError("word alignment is invalid")
+            script_gap = full_script[
+                script_positions[before][-1] + 1:script_positions[after][0]
+            ]
+            if (
+                sum(character.isalnum() for character in script_gap) > 8
+                or words[after].start - words[before].end > 2.5
+            ):
+                raise SceneTimelineError("word alignment is invalid")
 
     per_segment: dict[str, tuple[int, int, set[int]]] = {}
     for index, (start, end) in enumerate(offsets, 1):

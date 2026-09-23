@@ -633,7 +633,12 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
         fields[key] = value
 
     required_fields = set(HandoffContract.required_fields())
-    if not required_fields <= set(fields) or set(fields) - required_fields - {"covers"}:
+    optional_fields = {"covers", "avatar"}
+    if (
+        not required_fields <= set(fields)
+        or set(fields) - required_fields - optional_fields
+        or ("avatar" in fields and fields["avatar"] != "none")
+    ):
         errors.append("rule=handoff-required-fields")
     return fields, errors
 

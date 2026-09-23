@@ -13,7 +13,7 @@ from PIL import Image
 
 from boomearth.video.content_plan import compile_content_plan
 from boomearth.video.motion_plan import AmbientMotion, MotionEntry, MotionPlan, SceneMotion, SemanticCue, compile_motion_plan
-from boomearth.video.render_project import _scene_html, _timeline_script
+from boomearth.video.render_project import _caption_html, _scene_html, _timeline_script
 
 from boomearth.video.render_project import (
     ContentRenderProjectError,
@@ -33,6 +33,19 @@ CAPTION_FILES = (
     "captions.vtt",
     "caption-qc.json",
 )
+
+
+def test_long_mixed_language_caption_stays_on_one_readable_line() -> None:
+    captions = (
+        {"start": 0.0, "end": 1.0, "text": "先看 Opus 5.5"},
+        {"start": 1.0, "end": 4.0, "text": "Claude Opus 5.5 GPT-6 Sol GPT-6 Luna 几乎同一时间来了"},
+    )
+    rendered = _caption_html(captions)
+    assert 'id="caption-0"' in rendered
+    assert 'id="caption-1"' in rendered
+    assert re.search(r'caption-1.*?font-size:(4[2-9]|5[0-5])px', rendered)
+    with pytest.raises(ContentRenderProjectError, match="exceeds one line"):
+        _caption_html(({"start": 0.0, "end": 5.0, "text": "超长中文" * 20},))
 
 
 @pytest.fixture
@@ -173,6 +186,37 @@ def test_xiaohuang_native_text_does_not_render_system_labels(project: Path, them
     assert 'data-illustration-text-mode="embedded"' in markup
     assert "visual-overlay-labels" not in markup
     assert "有温度" not in markup
+
+
+def test_native_sponge_draws_original_image_with_caption_timed_pencil() -> None:
+    scene = SimpleNamespace(
+        id="scene-01", chapter="先看任务", progress="1/1",
+        title_lines=("先看任务",), subtitle_lines=(), notes=(), kicker="判断",
+        visual_mode="human-action", overlay_labels=("看任务", "别只看榜"),
+        illustration_text_mode="embedded", layout_variant="wide-visual",
+    )
+    plan = SimpleNamespace(
+        scenes=(scene,), visual_system="profiled-illustration-v4",
+        visual_theme="sponge-host-handdrawn-v1",
+    )
+    timeline = SimpleNamespace(
+        scenes=(SimpleNamespace(id="scene-01", start=0.0, end=10.0),)
+    )
+    markup = _scene_html(
+        plan, timeline, {"scene-01": "scene-01.png"},
+        native_sponge_scenes=frozenset({"scene-01"}),
+    )
+    script = _timeline_script(
+        timeline, ({"start": 0.0, "end": 2.5}, {"start": 2.5, "end": 5.0}),
+        sponge_native_scenes=frozenset({"scene-01"}),
+    )
+
+    assert 'src="assets/profiled-illustrations/sponge-host-handdrawn-v1/scene-01.png"' in markup
+    assert 'id="scene-01--draw-canvas"' in markup
+    assert 'src="assets/hand-pencil-cursor.png"' in markup
+    assert "source.naturalWidth" in script
+    assert "own=cues.filter" in script
+    assert "onUpdate:paint" in script
 
 
 def _set_handoff_visual(root: Path, target: str) -> None:
@@ -465,6 +509,47 @@ def test_anchor_dark_uses_registered_shrink_wrapped_geometry(project: Path) -> N
         in html
     )
     assert "height: 150px" not in html
+
+
+def test_optional_caption_emphasis_is_local_and_hash_bound(project: Path) -> None:
+    canonical = project / "工程" / "media" / "captions" / "captions.json"
+    original = canonical.read_bytes()
+    sidecar = project / "工程" / "caption-emphasis.json"
+    sidecar.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "captions_sha256": hashlib.sha256(original).hexdigest(),
+                "highlights": [{"index": 0, "text": "第一段"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    prepared = _prepare(project)
+    rendered = (prepared.output_dir / "index.html").read_text(encoding="utf-8")
+    assert '<span class="caption-focus">第一段</span>介绍' in rendered
+    assert 'data-caption-start="0.200"' in rendered
+    assert 'data-caption-end="1.500"' in rendered
+    assert (prepared.output_dir / "caption-emphasis.json").read_bytes() == sidecar.read_bytes()
+    assert canonical.read_bytes() == original
+
+
+def test_optional_caption_emphasis_rejects_stale_caption_binding(project: Path) -> None:
+    (project / "工程" / "caption-emphasis.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "captions_sha256": "0" * 64,
+                "highlights": [{"index": 0, "text": "第一段"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ContentRenderProjectError, match="render caption emphasis is invalid"):
+        _prepare(project)
 
 
 def test_snapshot_contains_only_local_canonical_inputs(project: Path) -> None:

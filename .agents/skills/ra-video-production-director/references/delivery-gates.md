@@ -1,5 +1,7 @@
 # Delivery Gates
 
+> Historical detailed gates. Current entry is ../../katerj-video-director/SKILL.md and its references/delivery-gates.md. New sponge projects use native full-scene images and no avatar; old Xiaohei page skeleton and left title/note-card rules below apply only to their explicitly bound historical layout, not the current sponge sample route. Existing privacy and delivery checks remain valid.
+
 Use these gates before calling a video done.
 
 ## Observable Resume Decision Gate

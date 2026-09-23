@@ -1,5 +1,7 @@
 # Video Production Routing
 
+> Historical reference. For new BoomEarth production read ../../katerj-video-director/references/routing.md and root docs/VIDEO-PRODUCTION-RUNBOOK.md first. Do not select the generic creation/TTS routes below for the current sponge pipeline; canonical local TTS and final-audio subtitles remain binding.
+
 Use the narrowest skill that fits. Do not stack multiple creation workflows
 unless the task truly crosses boundaries.
 

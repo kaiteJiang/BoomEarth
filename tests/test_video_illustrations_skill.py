@@ -9,14 +9,14 @@ XIAOHEI = ROOT / ".agents/skills/katerj-xiaohei-illustrations"
 XIAOHUANG = ROOT / ".agents/skills/katerj-xiaohuang-illustrations"
 
 
-def test_video_illustration_skill_declares_native_generation_and_v2_contracts() -> None:
+def test_video_illustration_skill_declares_native_generation_and_versioned_contracts() -> None:
     text = (SKILL / "SKILL.md").read_text("utf-8")
     assert text.startswith("---\nname: ra-video-illustrations\n")
     for phrase in (
         "concept-scene", "comparison", "framework", "technical", "clean-collage",
         "editorial-scene", "minimal-vector", "technical-diagram", "screen-print-metaphor",
         "runtime-native imagegen", "prompts/scene-", "illustration-manifest.json",
-        "1920×1080", "16:9", "bottom-150px", "不调用外部 CLI", "不切换 provider",
+        "native-source", "至少1440×810", "16:9", "bottom-150px", "不调用外部 CLI", "不切换 provider",
     ):
         assert phrase in text
     assert (SKILL / "references/style-profiles.md").is_file()
@@ -92,14 +92,12 @@ def test_video_illustration_skill_routes_v2_and_v3_by_semantic_evidence() -> Non
     assert "comic-explainer-illustration" in attribution
 
 
-def test_production_director_defaults_new_pages_to_xiaohei_and_keeps_explicit_v2_v3_v4() -> None:
+def test_production_director_defaults_new_videos_to_sponge_and_keeps_old_projects() -> None:
     text = (DIRECTOR / "SKILL.md").read_text("utf-8")
     assert "ra-video-illustrations" in text
-    assert "默认使用 `xiaohei-white-first-v1`（schema 1）" in text
-    assert "由 `katerj-xiaohei-illustrations`" in text
-    assert "显式要求 `semantic-handdrawn-v3`（schema 3）" in text
-    assert "显式要求 `editorial-motion-v2`（schema 2）" in text
-    assert "不得迁移旧项目" in text
+    assert "sponge-host-handdrawn-v1：schema 4" in text
+    assert "继承 katerj-xiaohei-illustrations 原生字" in text
+    assert "不迁移历史主题" in text
 
 
 def test_skill_publishes_all_chinese_style_entries_and_theme_ids() -> None:
@@ -144,23 +142,22 @@ def test_skill_documents_schema4_prompt_qc_and_routing_contract() -> None:
     ):
         assert phrase in prompt
     assert "主题专属 QC" in qc
-    assert "显式 schema 4 主题继续走" in director
-    assert "默认使用 `xiaohei-white-first-v1`（schema 1）" in director
+    assert "sponge-host-handdrawn-v1：schema 4" in director
 
 
-def test_new_video_default_is_xiaohei_and_profiled_themes_are_explicit_only() -> None:
+def test_new_video_default_is_sponge_and_other_themes_are_explicit_only() -> None:
     director = (DIRECTOR / "SKILL.md").read_text(encoding="utf-8")
     illustrations = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     library = (SKILL / "references/theme-library.md").read_text(encoding="utf-8")
     delivery = (DIRECTOR / "references/delivery-gates.md").read_text(encoding="utf-8")
 
-    assert "默认使用 `xiaohei-white-first-v1`（schema 1）" in director
+    assert "sponge-host-handdrawn-v1：schema 4" in director
     assert "`type-led` 只能由用户或交接稿显式选择" in illustrations
-    assert "未明确指定时，新建视频默认使用 `xiaohei-white-first-v1`" in library
+    assert "未指定时默认 `sponge-host-handdrawn-v1`" in library
     assert "数字人、字幕、标签和轻量图标都不能代替主题场景素材" in delivery
     assert "缺少真实主题素材时必须失败" in delivery
-    assert "默认使用 `semantic-handdrawn-v3`（schema 3）" not in director
-    assert "五个 `profiled-illustration-v4` 主题" in library
+    assert "schema 1 / `xiaohei-white-first-v1`：显式小黑或历史绑定" in illustrations
+    assert "## V4 其他五个独立主题" in library
 
 
 def test_xiaohei_skill_preserves_native_handwritten_text_and_explicit_fallback() -> None:

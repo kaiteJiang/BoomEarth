@@ -16,7 +16,7 @@ from boomearth.providers.tikhub import SourceMedia
 from boomearth.providers.ytdlp import YtDlpResult
 from boomearth.workbench import source_acquisition
 from boomearth.workbench.handoff_compiler import compile_source_handoff
-from boomearth.workbench.rewrite_package import REQUIRED_REVIEWS, prepare_rewrite_brief
+from boomearth.workbench.rewrite_package import DIRECT_REQUIRED_REVIEWS, prepare_rewrite_brief
 from boomearth.workbench.source_acquisition import (
     plan_source_acquisition,
     run_source_acquisition,
@@ -265,8 +265,8 @@ def _finish_lane(
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-13T10:11:12Z",
-            "reviews": {name: "pass" for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: "pass" for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     publication = compile_source_handoff(root, work_id, candidate, review)

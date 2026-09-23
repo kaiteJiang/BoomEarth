@@ -47,6 +47,8 @@ REQUIRED_REVIEWS = (
     "dbs-resonate",
     "ra-video-title",
 )
+# Direct writing reviews describe checks performed, not Skills invoked.
+DIRECT_REQUIRED_REVIEWS = ("facts", "logic", "source_free", "script_integrity")
 PRODUCTION_RATIO: Final[str] = "16:9"
 _CANDIDATE_V1_KEYS = frozenset(
     {
@@ -476,8 +478,10 @@ def load_rewrite_review(path: Path, candidate_sha256: str) -> RewriteReview:
             frozenset(LEGACY_REQUIRED_REVIEWS),
             frozenset(REQUIRED_REVIEWS),
         }
+        if value["schema_version"] == 3:
+            allowed_review_names = {frozenset(DIRECT_REQUIRED_REVIEWS)}
         if not (
-            value["schema_version"] in {1, 2}
+            value["schema_version"] in {1, 2, 3}
             and _digest(value["candidate_sha256"])
             and _timestamp(value["reviewed_at"])
             and isinstance(value["reviews"], dict)
@@ -488,7 +492,9 @@ def load_rewrite_review(path: Path, candidate_sha256: str) -> RewriteReview:
         if value["candidate_sha256"] != candidate_sha256:
             raise RewritePackageError("rewrite-review-candidate-mismatch")
         review_order = (
-            REQUIRED_REVIEWS
+            DIRECT_REQUIRED_REVIEWS
+            if value["schema_version"] == 3
+            else REQUIRED_REVIEWS
             if frozenset(review_names) == frozenset(REQUIRED_REVIEWS)
             else LEGACY_REQUIRED_REVIEWS
         )
@@ -737,6 +743,21 @@ def _verified_github_skill(root: Path, work_id: str) -> RewriteSource:
         if len(source_lines) != 1:
             raise ValueError
         target = parse_github_skill_url(source_lines[0])
+        from boomearth.workbench.github_skill_acquisition import (
+            _expected_plan, _plan_value, _PLAN_KEYS, _valid_private_manifest,
+            GitHubSkillAcquisitionError,
+        )
+        plan_path = order.private_root / "github-skill-acquisition-plan.json"
+        plan_value = load_exact_json(plan_path, _PLAN_KEYS)
+        plan = _expected_plan(work_id, order.source_input_sha256,
+                              resilient=plan_value.get("schema_version") == 2)
+        if plan_value != _plan_value(plan):
+            raise ValueError
+        try:
+            _valid_private_manifest(order.private_root, manifest_path,
+                source_root=order.private_root / "github-skill-source", plan=plan, target=target)
+        except GitHubSkillAcquisitionError:
+            raise ValueError from None
         files = manifest["files"]
         repository = manifest["repository"]
         if not (
@@ -763,7 +784,7 @@ def _verified_github_skill(root: Path, work_id: str) -> RewriteSource:
             == "github-skill-source/repository.md"
             and _digest(manifest["repository_markdown_sha256"])
             and type(manifest["request_count"]) is int
-            and 1 <= manifest["request_count"] <= 48
+            and 1 <= manifest["request_count"] <= plan.request_budget
             and type(manifest["total_text_bytes"]) is int
             and 0 < manifest["total_text_bytes"] <= 4 * 1024 * 1024
             and isinstance(files, list)
@@ -873,7 +894,7 @@ def prepare_rewrite_brief(
         "duration_target_s": duration_target_s,
         "platform": platform,
         "ratio": PRODUCTION_RATIO,
-        "required_reviews": list(REQUIRED_REVIEWS),
+        "required_reviews": list(DIRECT_REQUIRED_REVIEWS),
         "work_id": work_id,
     }
     if source.kind == "transcript":
@@ -913,6 +934,7 @@ def prepare_rewrite_brief(
 
 
 __all__ = [
+    "DIRECT_REQUIRED_REVIEWS",
     "PRODUCTION_RATIO",
     "REQUIRED_REVIEWS",
     "LEGACY_REQUIRED_REVIEWS",

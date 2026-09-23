@@ -37,26 +37,23 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_readme_documents_exact_offline_content_workflow() -> None:
+def test_readme_routes_users_to_current_workflow_without_local_machine_paths() -> None:
     text = README.read_text(encoding="utf-8")
-    commands = (
-        "uv run python automation/scripts/compile_content_plan.py --workspace-root "
-        r"C:\BoomEarth --active-project <dated-project> --candidate "
-        "工程/content-plan.candidate.json",
-        "uv run python automation/scripts/build_scene_timeline.py --workspace-root "
-        r"C:\BoomEarth --active-project <dated-project>",
-        "uv run python automation/scripts/run_content_production.py finalize --workspace-root "
-        r"C:\BoomEarth --active-project <dated-project> --audio-approved "
-        "--approved-narration-sha256 <approved-hash>",
-    )
-    for command in commands:
-        assert command in text
-    assert text.count("纯本地/不调用 provider") >= 3
-    assert "content-plan.candidate.json" in text and "人工审核" in text
-    assert "--audio-approved" in text and "最终旁白" in text
-    assert "不覆盖" in text and "已存在" in text
-    assert "渲染器不会生成插图" in text
-    assert "TTS、ASR 和插图生成" in text
+    assert "docs/DEPLOYMENT-AND-USAGE.md" in text
+    assert "docs/VIDEO-PRODUCTION-RUNBOOK.md" in text
+    assert "docs/VIDEO-CONTINUOUS-ORCHESTRATION.md" in text
+    assert "定稿后" in text and "SHA-256" in text
+    assert "IndexTTS2" in text and "词级 ASR" in text
+    assert "30 分钟" in text and "中断后" in text
+    assert "不自动向平台发布" in text
+    assert r"E:\自动化脚本" not in text
+    for relative in (
+        "docs/assets/showcase/2026-09/hero-workflow.webp",
+        "docs/assets/showcase/2026-09/01-task-first.webp",
+        "docs/assets/showcase/2026-09/02-evidence-check.webp",
+        "docs/assets/showcase/2026-09/03-same-task.webp",
+    ):
+        assert (REPO_ROOT / relative).is_file()
 
 
 def test_exact_clis_render_archive_and_historically_revalidate_offline(

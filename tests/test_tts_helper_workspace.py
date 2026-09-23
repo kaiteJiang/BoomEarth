@@ -36,6 +36,8 @@ def _write_tts_config(root: Path) -> None:
 
 def _load_helper_at(script_location: Path) -> types.ModuleType:
     """Execute the real helper source with a controlled installed location."""
+    if script_location == HELPER and not ROUTING_CONFIG.is_file():
+        pytest.skip("private production TTS route is not part of this checkout")
     module = types.ModuleType("tts_helper_workspace_test")
     module.__file__ = str(script_location)
     exec(compile(HELPER.read_text(encoding="utf-8"), str(HELPER), "exec"), module.__dict__)
@@ -90,6 +92,8 @@ def _path_set(root: Path) -> dict[str, Path]:
 
 def test_actual_helper_finds_repo_workspace_from_outside_cwd(tmp_path: Path) -> None:
     """Would fail if the installed helper ignored this repo's AGENTS.md marker."""
+    if not ROUTING_CONFIG.is_file():
+        pytest.skip("private production TTS route is not part of this checkout")
     outside_cwd = tmp_path / "outside-cwd"
     outside_cwd.mkdir()
 

@@ -23,7 +23,7 @@ from boomearth.video.render_project import prepare_content_render_project
 from boomearth.video.scene_qc import publish_motion_preview_qc, render_scene_qc
 from boomearth.video.scene_timeline import build_scene_timeline
 from boomearth.workbench.handoff_compiler import compile_source_handoff
-from boomearth.workbench.rewrite_package import REQUIRED_REVIEWS, prepare_rewrite_brief
+from boomearth.workbench.rewrite_package import DIRECT_REQUIRED_REVIEWS, prepare_rewrite_brief
 from boomearth.workbench.source_artifacts import publish_json_exclusive, sha256_file
 from boomearth.workbench.source_intake import create_x_article_intake
 from boomearth.workbench.x_article_acquisition import (
@@ -161,8 +161,8 @@ def test_x_article_rewrite_editorial_motion_render_and_delivery_are_connected(
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-14T08:09:10Z",
-            "reviews": {name: "pass" for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: "pass" for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     compile_source_handoff(tmp_path, WORK_ID, candidate, review)

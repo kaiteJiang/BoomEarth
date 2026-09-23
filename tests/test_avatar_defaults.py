@@ -328,21 +328,21 @@ def test_resolver_rejects_stale_look_snapshot_without_receipt(
     assert capsys.readouterr().out == "status=failed\n"
 
 
-def test_director_and_delivery_gate_lock_same_group_circle_default() -> None:
+def test_director_skips_avatar_by_default_and_preserves_legacy_recovery_gate() -> None:
     director = DIRECTOR_SKILL.read_text(encoding="utf-8")
     gates = DELIVERY_GATES.read_text(encoding="utf-8")
 
-    for text in (director, gates):
-        assert "headroom_08-circle-lower-left" in text
-        assert "same-group-only" in text
-        assert "stock avatar" in text
-        assert "user-indextts2-black-gold-v3" in text
-    assert "矩形数字人小窗" in director
-    assert "9:16 小窗" in director
-    assert "explicit override" in director
+    assert "默认无HeyGen" in director
+    assert "仅显式启用或旧绑定" in director
+    assert "headroom_08-circle-lower-left" in gates
+    assert "same-group-only" in gates
+    assert "stock avatar" in gates
+    assert "user-indextts2-black-gold-v3" in gates
 
 
 def test_older_rectangle_design_is_marked_historical_for_new_projects() -> None:
+    if not OLDER_HEYGEN_SPEC.is_file():
+        pytest.skip("historical private avatar design is not part of this checkout")
     design = OLDER_HEYGEN_SPEC.read_text(encoding="utf-8")
 
     assert "布局状态：历史" in design

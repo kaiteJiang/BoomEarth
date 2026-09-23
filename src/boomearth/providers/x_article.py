@@ -21,7 +21,8 @@ from PIL import Image, UnidentifiedImageError
 _URL_PATH_RE = re.compile(r"/([A-Za-z0-9_]{1,15})/status/([0-9]+)")
 _BLOCK_RE = re.compile(
     r'content_state:blocks:(\d+)"[^\n]*?__typename:"DraftJsBlock",'
-    r'key:"[^"]*",text:"((?:[^"\\]|\\.)*)",type:"([^"]+)"'
+    r'(?:key:"[^"]*",)?text:"((?:[^"\\]|\\.)*)",type:"([^"]+)"'
+    r'(?:,key:"[^"]*")?'
 )
 _ENTITY_RANGE_RE = re.compile(
     r'content_state:blocks:(\d+):entity_ranges:(\d+)"[^\n]*?'
@@ -290,6 +291,20 @@ def _media_url(media_id: str, api_urls: Mapping[str, str]) -> str | None:
     return None
 
 
+def _non_image_media_kind(html: str, media_id: str) -> str | None:
+    """Classify an article media key without mistaking video posters for images."""
+
+    if not re.fullmatch(r"[0-9]+", media_id):
+        return None
+    marker = re.search(r'__typename:"ApiMedia",media_id:"' + media_id + '"', html)
+    if marker is None:
+        return None
+    nearby = re.search(r'__typename:"(ApiGif|ApiVideo|ApiImage)"', html[marker.end():marker.end() + 1000])
+    if nearby is None:
+        return None
+    return {"ApiGif": "gif", "ApiVideo": "video"}.get(nearby.group(1))
+
+
 def _parse_code(markdown: str) -> tuple[str, str]:
     stripped = markdown.strip()
     match = re.fullmatch(r"```([A-Za-z0-9_+.-]*)\n([\s\S]*?)\n```", stripped)
@@ -384,13 +399,22 @@ def parse_x_article_html(payload: bytes, canonical_url: str) -> XArticleDocument
                 markdown = entity_markdown.get(entity_index)
                 if not markdown:
                     raise XArticleProviderError("x-article-structure-unsupported")
-                language, code = _parse_code(markdown)
-                blocks.append(XArticleBlock(type="code", text=code, language=language))
+                if markdown.strip().startswith("```"):
+                    language, code = _parse_code(markdown)
+                    blocks.append(XArticleBlock(type="code", text=code, language=language))
+                elif not re.search(r'!\[[^\]]*\]\(https?://', markdown):
+                    blocks.append(XArticleBlock(type="markdown", text=markdown))
+                else:
+                    raise XArticleProviderError("x-article-structure-unsupported")
             elif entity_type == "MEDIA":
                 media_id = entity_media.get(entity_index)
                 remote_url = _media_url(media_id or "", api_urls)
                 if remote_url is None:
-                    raise XArticleProviderError("x-article-structure-unsupported")
+                    media_kind = _non_image_media_kind(html, media_id or "")
+                    if media_kind is None:
+                        raise XArticleProviderError("x-article-structure-unsupported")
+                    blocks.append(XArticleBlock(type="video", text=media_id, language=media_kind))
+                    continue
                 asset = assets_by_url.get(remote_url)
                 if asset is None:
                     asset = XArticleAssetRef(
@@ -436,6 +460,10 @@ def article_json_value(
             blocks.append(
                 {"type": "code", "language": block.language, "text": block.text}
             )
+        elif block.type == "markdown":
+            blocks.append({"type": "markdown", "text": block.text})
+        elif block.type == "video" and block.text is not None and block.language in {"gif", "video"}:
+            blocks.append({"type": "video", "media_id": block.text, "media_type": block.language})
         elif block.type == "image" and block.asset_key is not None:
             path = asset_paths.get(block.asset_key)
             if path is None:
@@ -494,6 +522,10 @@ def render_article_markdown(value: Mapping[str, object]) -> bytes:
                 in_list = True
             elif block_type == "code" and isinstance(block.get("text"), str) and isinstance(block.get("language"), str):
                 output += f'```{block["language"]}\n{block["text"]}\n```\n\n'
+            elif block_type == "markdown" and isinstance(block.get("text"), str):
+                output += block["text"].rstrip() + "\n\n"
+            elif block_type == "video" and isinstance(block.get("media_id"), str) and re.fullmatch(r"[0-9]+", block["media_id"]) and block.get("media_type") in {"gif", "video"}:
+                output += f'[{"动图" if block["media_type"] == "gif" else "视频"}素材：未下载]\n\n'
             elif block_type == "image" and isinstance(block.get("asset_id"), str) and isinstance(block.get("relative_path"), str):
                 output += f'![{block["asset_id"]}]({block["relative_path"]})\n\n'
             else:

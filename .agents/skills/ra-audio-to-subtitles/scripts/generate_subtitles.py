@@ -18,6 +18,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from boomearth.captions.display import format_caption_text
 DEFAULT_RESOURCE_ID = "volc.bigasr.auc_turbo"
 CAPTION_CONNECTORS = (
     "比如说", "第一个", "第二个", "第三个", "首先", "其次", "然后",
@@ -499,7 +501,23 @@ def split_caption_text(text: str, max_chars: int) -> list[str]:
             displayed = _display_caption_text(clause)
             if displayed:
                 bounded.extend(_split_long_caption(displayed, max_chars))
-        captions.extend(merge_short_chunks(bounded, max_chars))
+        grouped = merge_short_chunks(bounded, max_chars)
+        source_positions = [index for index, character in enumerate(sentence) if character.isalnum()]
+        source_cursor = 0
+        for index, chunk in enumerate(grouped):
+            count = len(normalize_chars(chunk))
+            if not count:
+                continue
+            if source_cursor + count > len(source_positions):
+                raise RuntimeError("Caption grouping cannot map text back to narration")
+            start = source_positions[source_cursor]
+            end = source_positions[source_cursor + count - 1] + 1
+            if index == len(grouped) - 1:
+                end = len(sentence)
+            captions.append(format_caption_text(sentence[start:end]))
+            source_cursor += count
+        if source_cursor != len(source_positions):
+            raise RuntimeError("Caption grouping lost narration characters")
     return captions
 
 
@@ -753,6 +771,8 @@ def build_qc(
     reading_speeds = []
     short_fragments = []
     for index, caption in enumerate(captions):
+        if caption["text"] != format_caption_text(caption["text"]):
+            errors.append(f"caption {index + 1} violates display punctuation policy")
         caption_duration = caption["end"] - caption["start"]
         if caption["end"] <= caption["start"]:
             errors.append(f"caption {index + 1} has non-positive duration")

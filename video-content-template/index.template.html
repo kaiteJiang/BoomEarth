@@ -60,8 +60,17 @@
       .layout-close .note-card { border-color: #2c63a3; }
       .anchor-dark { position: absolute; inset: 0; z-index: 20; pointer-events: none; color: rgb(252, 252, 249); }
       .caption { position: absolute; left: 0; right: 0; bottom: 96px; display: flex; justify-content: center; padding: 0 96px; text-align: center; opacity: 0; }
-      .caption-panel { display: inline-block; max-width: 1500px; padding: 22px 22px; border-radius: 16px; background: rgba(45, 51, 50, .835); font-family: "STHeiti Medium", "Microsoft YaHei", sans-serif; font-size: 56px; font-weight: 500; line-height: 1.15; overflow-wrap: break-word; }
+      .caption-panel { display: inline-block; max-width: 1500px; padding: 22px 22px; border-radius: 16px; background: rgba(45, 51, 50, .835); font-family: "STHeiti Medium", "Microsoft YaHei", sans-serif; font-size: 56px; font-weight: 500; line-height: 1.15; white-space: nowrap; }
+      .caption-focus { display: inline; padding: 0 .10em; border-radius: .12em; background: #f0c575; color: #202523; }
       .scene.theme-sponge-host-handdrawn-v1 { background: #fff; }
+      .scene.sponge-native-source > .chapter, .scene.sponge-native-source > .progress, .scene.sponge-native-source > .title, .scene.sponge-native-source > .subtitle, .scene.sponge-native-source > .note-card { display: none; }
+      .scene.sponge-native-source .visual-frame { left: 144px; right: auto; top: 8px; width: 1632px; height: 918px; border: 0; border-radius: 0; box-shadow: none; background: #fff; transform: none !important; }
+      .scene.sponge-native-source .visual-frame img { width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+      .scene.sponge-native-source .visual-overlay-labels { display: none; }
+      .scene.sponge-native-source .sponge-draw-source { display: none; }
+      .scene.sponge-native-source .sponge-draw-canvas { display: block; width: 100%; height: 100%; }
+      .scene.sponge-native-source .sponge-pencil-cursor { position: absolute; z-index: 2; width: 112px; height: 137px; overflow: hidden; pointer-events: none; opacity: 0; }
+      .scene.sponge-native-source .sponge-pencil-cursor img { position: absolute; left: -97px; top: -64px; width: 309px; height: 258px; max-width: none; max-height: none; }
     </style>
   </head>
   <body>

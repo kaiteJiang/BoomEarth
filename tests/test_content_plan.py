@@ -720,7 +720,7 @@ def test_content_plan_v3_rejects_assets_outside_the_semantic_directory(
         compile_fixture(project, candidate)
 
 
-def test_content_plan_v2_allows_zero_note_rows_but_v1_still_requires_one(
+def test_content_plan_v2_and_native_xiaohei_allow_zero_notes_but_fallback_requires_one(
     project: Path,
 ) -> None:
     candidate = valid_v2_candidate(project)
@@ -729,7 +729,13 @@ def test_content_plan_v2_allows_zero_note_rows_but_v1_still_requires_one(
     assert compiled.plan.scenes[0].notes == ()
 
     (project / "工程" / "content-plan.json").unlink()
+    native = valid_candidate(project)
+    native["scenes"][0]["notes"] = []  # type: ignore[index]
+    assert compile_fixture(project, native).plan.scenes[0].notes == ()
+
+    (project / "工程" / "content-plan.json").unlink()
     legacy = valid_candidate(project)
+    legacy["scenes"][0]["illustration_text_mode"] = "local-fallback"  # type: ignore[index]
     legacy["scenes"][0]["notes"] = []  # type: ignore[index]
     with pytest.raises(ContentPlanError, match="visible content is invalid"):
         compile_fixture(project, legacy)

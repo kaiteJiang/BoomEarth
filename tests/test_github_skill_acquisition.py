@@ -228,6 +228,7 @@ class FakeGitHubTransport:
         self.calls.append((kind, url))
         return payload, status
 
+
     def get_json(self, url: str) -> tuple[object, int]:
         return self._next("json", url)
 
@@ -235,6 +236,38 @@ class FakeGitHubTransport:
         payload, status = self._next("text", url)
         assert isinstance(payload, bytes)
         return payload, status
+
+
+def test_resilient_plan_complete_markdown_inventory_enters_rewrite(tmp_path):
+    from boomearth.workbench.rewrite_package import prepare_rewrite_brief, RewritePackageError
+    _intake(tmp_path)
+    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    private = _private_root(tmp_path)
+    value = json.loads((private / "github-skill-acquisition-plan.json").read_text())
+    assert value["schema_version"] == 2 and value["no_retry"] is False
+    receipt = {k: value[k] for k in ("work_id", "provider", "action", "input_sha256", "no_retry", "no_fallback")}
+    receipt.update(approved=True, request_count=value["request_budget"],
+                   plan_sha256=hashlib.sha256(canonical_json_bytes(value)).hexdigest())
+    approval = private / "approval-v2.json"
+    approval.write_bytes(canonical_json_bytes(receipt))
+    transport = FakeGitHubTransport()
+    note = b"# Additional operating requirements\n"
+    tree = transport.responses[3][2]
+    tree["tree"].append(dict(path="docs/notes.md", mode="100644", type="blob",
+                             sha=_git_blob_sha(note), size=len(note), url="https://api.github.com/blob/notes"))
+    transport.responses.append(("text", "https://raw.githubusercontent.com/acme/skills/" + COMMIT_SHA + "/docs/notes.md", note, 200))
+    # Physical retries can exceed the old 48-request budget; downstream must use v2.
+    transport.request_count = 60
+    transport.request_budget = 288
+    run_github_skill_acquisition(tmp_path, WORK_ID, approval, transport=transport)
+    recover_github_skill_acquisition(tmp_path, WORK_ID)
+    prepare_rewrite_brief(tmp_path, WORK_ID, platform="douyin", duration_target_s=120,
+                          archive_slug="resilient-read")
+    assert (private / "github-skill-source/selected-files/docs/notes.md").read_bytes() == note
+    (private / "github-skill-source/tree.json").write_bytes(b"{}")
+    with pytest.raises(RewritePackageError, match="rewrite-github-skill-invalid"):
+        prepare_rewrite_brief(tmp_path, WORK_ID, platform="douyin", duration_target_s=120,
+                              archive_slug="resilient-tamper")
 
 
 class CountingStream(httpx.SyncByteStream):
@@ -304,7 +337,7 @@ def test_acquisition_rejects_oversized_selected_tree_blob_before_raw_request(
     tmp_path: Path,
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     transport = FakeGitHubTransport()
     responses = list(transport.responses)
     tree = json.loads(json.dumps(responses[3][2]))
@@ -341,7 +374,7 @@ def test_acquisition_rejects_oversized_referenced_blob_before_raw_request(
         now=lambda: FIXED_NOW,
         uuid_factory=lambda: FIXED_UUID,
     )
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     transport = FakeGitHubTransport()
     responses = list(transport.responses)
     skill = COMIC + b"\n[Details](details.md)\n"
@@ -382,7 +415,7 @@ def test_acquisition_rejects_oversized_referenced_blob_before_raw_request(
 def test_plan_binds_input_network_policy_and_all_budgets(tmp_path: Path) -> None:
     _intake(tmp_path)
 
-    plan = plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan = plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
 
     assert plan.provider == "github-public-rest-v1"
     assert plan.action == "github-skill-acquisition"
@@ -428,7 +461,7 @@ def test_plan_binds_input_network_policy_and_all_budgets(tmp_path: Path) -> None
 
 def test_run_publishes_hash_bound_private_repository_snapshot(tmp_path: Path) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     transport = FakeGitHubTransport()
 
@@ -471,7 +504,7 @@ def test_repository_scope_accepts_readme_only_software_repository(
     """A normal software repository must not require a SKILL.md file."""
 
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     transport = FakeGitHubTransport()
     responses = list(transport.responses)
@@ -501,7 +534,7 @@ def test_run_rejects_wrong_approval_before_transport(
     tmp_path: Path, request_count: int, plan_sha: str | None
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(
         tmp_path, request_count=request_count, plan_sha=plan_sha
     )
@@ -521,7 +554,7 @@ def test_run_rejects_changed_input_and_second_run_before_transport(
     tmp_path: Path,
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     source = _private_root(tmp_path) / "source-input.txt"
     source.write_text("https://github.com/acme/changed\n", encoding="utf-8")
@@ -552,7 +585,7 @@ def test_run_rejects_changed_input_and_second_run_before_transport(
 
 def _planned_run(root: Path, transport: FakeGitHubTransport) -> None:
     _intake(root)
-    plan_github_skill_acquisition(root, WORK_ID)
+    plan_github_skill_acquisition(root, WORK_ID, resilient=False)
     approval = _approval(root)
     run_github_skill_acquisition(root, WORK_ID, approval, transport=transport)
 
@@ -568,7 +601,7 @@ def test_run_records_redacted_stage_for_invalid_document_response(
     tmp_path: Path,
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     private_root = _private_root(tmp_path)
     plan_path = private_root / "github-skill-acquisition-plan.json"
     plan_value = json.loads(plan_path.read_text("utf-8"))
@@ -659,7 +692,7 @@ def test_run_records_redacted_stage_for_invalid_api_response(
 
 def test_run_does_not_overwrite_failure_receipt(tmp_path: Path) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     failure_path = (
         _private_root(tmp_path) / "github-skill-acquisition-failure.json"
     )
@@ -890,7 +923,7 @@ def test_interrupted_publication_recovers_locally_without_network(
     recoverable: bool,
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     transport = FakeGitHubTransport()
 
@@ -928,7 +961,7 @@ def test_interrupted_publication_recovers_locally_without_network(
 
 def test_recover_is_idempotent_after_ready_without_network(tmp_path: Path) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     run_github_skill_acquisition(
         tmp_path, WORK_ID, approval, transport=FakeGitHubTransport()
@@ -945,7 +978,7 @@ def test_ready_recovery_rejects_manifest_that_no_longer_matches_ledger(
     tmp_path: Path,
 ) -> None:
     _intake(tmp_path)
-    plan_github_skill_acquisition(tmp_path, WORK_ID)
+    plan_github_skill_acquisition(tmp_path, WORK_ID, resilient=False)
     approval = _approval(tmp_path)
     record = run_github_skill_acquisition(
         tmp_path, WORK_ID, approval, transport=FakeGitHubTransport()

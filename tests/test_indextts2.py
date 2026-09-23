@@ -201,6 +201,8 @@ def test_locked_route_loads_the_local_indextts2_contract() -> None:
         pytest.fail("the locked IndexTTS2 narration interface is not available")
 
     routing_path = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
+    if not routing_path.is_file():
+        pytest.skip("private production TTS route is not part of this checkout")
     route = module.TTSRouting.load(routing_path)
 
     assert route.provider == "indextts2-local"
@@ -226,6 +228,13 @@ def test_locked_route_loads_the_local_indextts2_contract() -> None:
     assert route.used_fallback is False
 
 
+def _private_route_payload() -> dict[str, object]:
+    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
+    if not source.is_file():
+        pytest.skip("private production TTS route is not part of this checkout")
+    return json.loads(source.read_text(encoding="utf-8"))
+
+
 @pytest.mark.parametrize(
     "voice_id",
     [
@@ -240,8 +249,7 @@ def test_current_route_rejects_legacy_voice_ids(
 ) -> None:
     """Would fail if a new route could silently use a legacy voice identity."""
     module = importlib.import_module("boomearth.audio.indextts2")
-    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload = _private_route_payload()
     payload["voice_id"] = voice_id
     unsafe_route = tmp_path / "tts-routing.json"
     unsafe_route.write_text(json.dumps(payload), encoding="utf-8")
@@ -293,8 +301,7 @@ def test_locked_route_rejects_any_provider_other_than_local_indextts2(
 ) -> None:
     """Would fail if configuration could silently introduce a cloud fallback."""
     module = importlib.import_module("boomearth.audio.indextts2")
-    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload = _private_route_payload()
     payload["provider"] = "cloud-tts"
     unsafe_route = tmp_path / "tts-routing.json"
     unsafe_route.write_text(json.dumps(payload), encoding="utf-8")
@@ -308,8 +315,7 @@ def test_locked_route_rejects_an_interpreter_other_than_the_production_binary(
 ) -> None:
     """Would fail if a route could activate or invoke another Python runtime."""
     module = importlib.import_module("boomearth.audio.indextts2")
-    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload = _private_route_payload()
     payload["interpreter_path"] = str(tmp_path / "python.exe")
     unsafe_route = tmp_path / "tts-routing.json"
     unsafe_route.write_text(json.dumps(payload), encoding="utf-8")
@@ -323,8 +329,7 @@ def test_locked_route_rejects_a_cli_other_than_the_production_script(
 ) -> None:
     """Would fail if JSON could redirect direct batch work to another CLI script."""
     module = importlib.import_module("boomearth.audio.indextts2")
-    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload = _private_route_payload()
     payload["cli_script_path"] = str(tmp_path / "cli.py")
     unsafe_route = tmp_path / "tts-routing.json"
     unsafe_route.write_text(json.dumps(payload), encoding="utf-8")
@@ -338,8 +343,7 @@ def test_locked_route_rejects_a_ledger_other_than_the_private_provenance_path(
 ) -> None:
     """Would fail if route configuration could bypass issued-output provenance."""
     module = importlib.import_module("boomearth.audio.indextts2")
-    source = Path(__file__).resolve().parents[1] / "automation" / "config" / "tts-routing.json"
-    payload = json.loads(source.read_text(encoding="utf-8"))
+    payload = _private_route_payload()
     payload["provenance_ledger_path"] = str(tmp_path / "other-ledger.json")
     unsafe_route = tmp_path / "tts-routing.json"
     unsafe_route.write_text(json.dumps(payload), encoding="utf-8")

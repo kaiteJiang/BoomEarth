@@ -12,7 +12,7 @@ from boomearth.workbench.github_skill_acquisition import (
 )
 from boomearth.workbench.handoff_compiler import compile_source_handoff
 from boomearth.workbench.rewrite_package import (
-    REQUIRED_REVIEWS,
+    DIRECT_REQUIRED_REVIEWS,
     RewritePackageError,
     prepare_rewrite_brief,
 )
@@ -60,7 +60,7 @@ def _github_ready(root: Path) -> Path:
         now=lambda: FIXED_NOW,
         uuid_factory=lambda: FIXED_UUID,
     )
-    plan_github_skill_acquisition(root, WORK_ID)
+    plan_github_skill_acquisition(root, WORK_ID, resilient=False)
     source_root = order.private_root / "github-skill-source"
     selected = source_root / "selected-files" / "comic" / "SKILL.md"
     selected.parent.mkdir(parents=True)
@@ -211,8 +211,8 @@ def _candidate_and_review(private_root: Path) -> tuple[Path, Path]:
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-15T09:02:00Z",
-            "reviews": {name: "pass" for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: "pass" for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     return candidate, review

@@ -366,6 +366,34 @@ def test_review_can_load_revise_but_is_not_all_passed(tmp_path: Path) -> None:
     assert review.all_passed is False
 
 
+def test_direct_review_has_neutral_checks_and_binds_candidate(tmp_path: Path) -> None:
+    digest = sha256_file(_write_candidate(tmp_path))
+    checks = {name: "pass" for name in ("facts", "logic", "source_free", "script_integrity")}
+    path = _write_review(tmp_path, digest, schema_version=3, reviews=checks)
+    review = load_rewrite_review(path, digest)
+    assert review.schema_version == 3
+    assert review.all_passed
+    assert dict(review.reviews) == checks
+
+    with pytest.raises(RewritePackageError, match="^rewrite-review-candidate-mismatch$"):
+        load_rewrite_review(path, "0" * 64)
+
+
+@pytest.mark.parametrize("version,checks", [
+    (3, {name: "pass" for name in REQUIRED_REVIEWS}),
+    (1, {name: "pass" for name in ("facts", "logic", "source_free", "script_integrity")}),
+    (3, {"facts": "pass", "logic": "pass", "source_free": "pass"}),
+    (3, {"facts": "approved", "logic": "pass", "source_free": "pass", "script_integrity": "pass"}),
+])
+def test_direct_review_rejects_wrong_schema_missing_checks_and_statuses(
+    tmp_path: Path, version: int, checks: dict[str, str]
+) -> None:
+    digest = sha256_file(_write_candidate(tmp_path))
+    path = _write_review(tmp_path, digest, schema_version=version, reviews=checks)
+    with pytest.raises(RewritePackageError, match="^rewrite-review-invalid$"):
+        load_rewrite_review(path, digest)
+
+
 def test_prepare_rewrite_brief_binds_transcript_without_copying_text_to_summary(
     tmp_path: Path,
 ) -> None:
@@ -441,7 +469,7 @@ def test_prepare_rewrite_brief_binds_transcript_without_copying_text_to_summary(
     brief = json.loads(result.path.read_text("utf-8"))
     assert brief["ratio"] == "16:9"
     assert brief["transcript_sha256"] == transcript_sha
-    assert tuple(brief["required_reviews"]) == REQUIRED_REVIEWS
+    assert tuple(brief["required_reviews"]) == ("facts", "logic", "source_free", "script_integrity")
     assert "private source sentence" not in repr(result)
     assert "private source sentence" not in json.dumps(
         {key: value for key, value in brief.items() if key != "transcript_artifact"}

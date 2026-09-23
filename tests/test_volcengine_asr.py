@@ -187,6 +187,12 @@ def test_caption_grouping_uses_oral_linebreak_soft_target() -> None:
     assert all(not any(mark in text for mark in "，、；：。！？") for text in captions)
 
 
+def test_legacy_caption_grouping_restores_internal_comma_and_final_question() -> None:
+    module = _load_subtitle_module()
+    assert module.split_caption_text("版本 5.5，怎么选？", 14) == ["版本 5.5 怎么选？"]
+    assert module.split_caption_text("先看需求，再看成本。", 14) == ["先看需求 再看成本"]
+
+
 def test_caption_cli_defaults_to_short_subtitle_hard_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -220,7 +226,7 @@ def test_caption_grouping_keeps_short_complete_clause_before_terminal_condition(
         "第一稿出来后，你改方向，它继续打磨，直到这篇内容能代表你。",
         14,
     ) == [
-        "第一稿出来后你改方向",
+        "第一稿出来后 你改方向",
         "它继续打磨",
         "直到这篇内容能代表你",
     ]
@@ -235,7 +241,7 @@ def test_caption_grouping_never_merges_across_terminal_sentence_boundary() -> No
         "拿不准就标出来，别自己编。以后每写完一篇，就把新文章和新案例继续补进去。",
         14,
     ) == [
-        "拿不准就标出来别自己编",
+        "拿不准就标出来 别自己编",
         "以后每写完一篇",
         "就把新文章和新案例继续补进去",
     ]

@@ -23,6 +23,7 @@ from .align import (
     reading_units,
     words_with_gaps,
 )
+from .display import format_caption_text
 
 
 class CaptionArtifactError(RuntimeError):
@@ -157,6 +158,8 @@ def evaluate_caption_qc(
     short_fragments: list[dict[str, object]] = []
     speeds: list[float] = []
     for index, caption in enumerate(captions):
+        if caption.text != format_caption_text(caption.text):
+            errors.append(f"caption {index + 1} violates display punctuation policy")
         duration = caption.end - caption.start
         if duration <= 0:
             errors.append(f"caption {index + 1} has non-positive duration")

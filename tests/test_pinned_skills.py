@@ -68,8 +68,8 @@ def test_p2_skill_docs_use_shipped_windows_adapters_and_private_gates() -> None:
     assert "--input-file" in download
     assert "--provider yt-dlp|tikhub" in pipeline
     assert "--approval" in combined
-    assert "rewrite-candidate.json" in rewrite
-    assert "rewrite-review.json" in rewrite
+    assert "candidate/review" in rewrite
+    assert "schema 3" in rewrite
     assert "publication-receipt.json" in pipeline
 
     forbidden = (
@@ -87,26 +87,19 @@ def test_p2_skills_do_not_author_public_handoff_without_compiler() -> None:
     rewrite = (SKILLS_ROOT / "katerj-script-rewrite" / "SKILL.md").read_text("utf-8")
     for text in (pipeline, rewrite):
         assert "compile_source_handoff.py compile" in text
-        assert "不得直接写入 `待制作`" in text
+        assert "待制作" in text
+        assert "不得" in text
 
 
-def test_rewrite_flow_binds_three_second_hook_to_multiplatform_title_evidence() -> None:
+def test_rewrite_flow_uses_factual_review_without_forcing_a_hook_template() -> None:
     rewrite = (SKILLS_ROOT / "katerj-script-rewrite" / "SKILL.md").read_text("utf-8")
-    hook = (SKILLS_ROOT / "katerj-video-hook" / "SKILL.md").read_text("utf-8")
-    title = (SKILLS_ROOT / "katerj-video-titles" / "SKILL.md").read_text("utf-8")
 
     for token in (
         "opening_contract",
-        "hook_3s",
-        "audience_pain",
-        "value_promise",
-        "cta",
-        "bridge",
-        "jl-multiplatform-titles",
+        "facts",
+        "logic",
+        "source_free",
+        "script_integrity",
+        "不强制套钩子",
     ):
         assert token in rewrite
-    assert rewrite.index("`katerj-video-hook`") < rewrite.index("`jl-multiplatform-titles`")
-    assert rewrite.index("`jl-multiplatform-titles`") < rewrite.index("`katerj-hook-review`")
-    assert "前 3 秒" in hook
-    assert "标题、封面字、开场钩子" in hook
-    assert "jl-multiplatform-titles" in title

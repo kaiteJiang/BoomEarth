@@ -272,7 +272,9 @@ def _frontmatter_scalar(value: str) -> str:
     return value
 
 
-def parse_handoff_visual_contract(text: str) -> HandoffVisualContract:
+def parse_handoff_visual_contract(
+    text: str, *, allow_historical_alias: bool = False
+) -> HandoffVisualContract:
     """Resolve the exact public visual target and its canonical Skill binding."""
 
     if not isinstance(text, str) or validate_public_handoff(text):
@@ -302,7 +304,11 @@ def parse_handoff_visual_contract(text: str) -> HandoffVisualContract:
         resolved = resolve_visual_style(target)
     except IllustrationThemeError:
         raise ContentPlanError("public handoff is invalid") from None
-    if skill != resolved.illustration_skill:
+    if skill != resolved.illustration_skill and not (
+        allow_historical_alias
+        and target == "xiaohei-white-first-v1"
+        and skill == "ian-xiaohei-illustrations"
+    ):
         raise ContentPlanError("public handoff is invalid")
     return HandoffVisualContract(
         target=resolved.target,
@@ -889,7 +895,13 @@ def validate_content_plan(
                     value["subtitle_lines"], minimum_count=0, maximum_count=2, maximum_units=28.0
                 ),
                 kicker=_visible_text(value["kicker"], minimum=1.0, maximum=12.0),
-                notes=_notes(value["notes"], minimum_count=0 if is_v2 else 1),
+                notes=_notes(
+                    value["notes"],
+                    minimum_count=0 if is_v2 or (
+                        candidate["visual_system"] == "xiaohei-white-first-v1"
+                        and value.get("illustration_text_mode") == "embedded"
+                    ) else 1,
+                ),
                 visual_intent=_visible_text(
                     value["visual_intent"], minimum=1.0, maximum=80.0
                 ),
@@ -1058,6 +1070,14 @@ def _manifest_contract(
                 pass
             else:
                 contract_path = project_root / relative
+        elif project_root.parent.parent.name == "已制作":
+            former_active_root = project_root.parents[2] / "制作中" / project_root.name
+            try:
+                relative = contract_path.relative_to(former_active_root)
+            except ValueError:
+                pass
+            else:
+                contract_path = project_root / relative
         predecessor_path = _dated_predecessor_contract_path(
             contract_path,
             project_root=project_root,
@@ -1152,7 +1172,10 @@ def load_content_plan_snapshot(
     except (ArtifactError, UnicodeDecodeError):
         raise ContentPlanError("content plan input is invalid") from None
     handoff_segments = parse_handoff_segments(handoff_text)
-    handoff_visual = parse_handoff_visual_contract(handoff_text)
+    handoff_visual = parse_handoff_visual_contract(
+        handoff_text,
+        allow_historical_alias=root.parent.parent.name == "已制作",
+    )
     narration_segments, manifest_snapshot, narration_snapshot = _manifest_contract(
         root,
         prearchive_project_root=(

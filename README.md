@@ -1,112 +1,108 @@
+<div align="center">
+
 # BoomEarth
 
-### 把一份内容，做成有声音、有画面、可持续复用的视频
+### 让内容走完从「想讲清楚」到「能播放、能检查、能接着做」的全流程
 
-![开源视频工作流：从部署到成片](docs/assets/sponge/2026-09/tutorial-cover.png)
+**Agent 编排 · 本地配音 · 语义插画 · 真实词级字幕 · 1080p 成片**
 
-BoomEarth 是一套 **Agent 驱动、本地优先的开源视频工作流**。把文章、文稿、视频或 GitHub 项目交给它，由 Agent 理解内容、组织表达，再串起插画、配音、真实时间字幕、动效、质检与归档。
+[快速部署](docs/DEPLOYMENT-AND-USAGE.md) · [制作手册](docs/VIDEO-PRODUCTION-RUNBOOK.md) · [连续编排](docs/VIDEO-CONTINUOUS-ORCHESTRATION.md) · [观看样片](docs/assets/sponge/2026-09/fullscene-sample.mp4)
 
-它省下的，不只是剪一条视频的时间，而是每次重新找工具、对字幕、改尺寸、翻素材和整理工程的重复劳动。代码和流程公开，内容和生产资产留在自己手里。
+![BoomEarth：从文稿、配音和语义插画到字幕与成片的制作工作台](docs/assets/showcase/2026-09/hero-workflow.webp)
 
-[部署与使用完整教程](docs/DEPLOYMENT-AND-USAGE.md) · [观看最新样片](docs/assets/sponge/2026-09/fullscene-sample.mp4) · [图片与样片说明](docs/sponge-fullscene-sample.md) · [开发历史](docs/PROJECT-HISTORY.md)
+</div>
 
-## 先看这一版
+> **内容属于创作者，制作过程可以成为系统。** BoomEarth 把采集、写稿、插画、配音、字幕、动效、质检和归档组织成一条可恢复的工作流。它不是替你决定观点的模板，也不是装好依赖就能无配置运行的云端服务。
 
-[![点击观看 32 秒海绵全幅插画样片](docs/assets/sponge/2026-09/poster.png)](docs/assets/sponge/2026-09/fullscene-sample.mp4)
+## 先看效果
 
-最新默认：**方块海绵插画 + 口播 + 单行字幕**，默认不加数字人。点击图片打开 MP4；如果客户端不内嵌播放，可以下载观看。
-
-只把原小黑角色替换为已定稿海绵，其他规则沿用原版：白底融合、原生手写中文、完整语义场景和组件级动作。人物要真正参与表达，不是站在一旁陪衬。
-
-| 定稿再配音 | 根据真实音频断句 |
+| 手绘场景与原生字 | 字幕跟随真实语音 |
 | --- | --- |
-| ![定稿再配音](docs/assets/sponge/2026-09/scene-01.png) | ![真实词时间断句](docs/assets/sponge/2026-09/scene-02.png) |
-| 减少装饰，留下重点 | 画面和旁白对齐 |
-| ![减少装饰](docs/assets/sponge/2026-09/scene-03.png) | ![画面旁白对齐](docs/assets/sponge/2026-09/scene-04.png) |
+| ![语义插画片段](docs/assets/showcase/2026-09/clip-draw.gif) | ![口播字幕片段](docs/assets/showcase/2026-09/clip-caption.gif) |
+| [观看高清片段](docs/assets/showcase/2026-09/clip-draw.mp4) | [观看高清片段](docs/assets/showcase/2026-09/clip-caption.mp4) |
 
-这是一条风格与清晰度审阅样片：32.298 秒，1920×1080、30fps、H.264/AAC，完整解码与字幕检查通过。四张原图实际为 1672×941，以 1440×810 显示，没有把小图放大冒充高清。动作是原生画面的分组件显现，不宣称已经实现任意文稿的全身角色动画。[公开媒体检查回执](docs/assets/sponge/2026-09/sample-qc.json)
+上面是从正式成片截取的短片段。更早的 [32 秒海绵全幅样片](docs/assets/sponge/2026-09/fullscene-sample.mp4) 与 [媒体检查回执](docs/assets/sponge/2026-09/sample-qc.json) 保留作风格和清晰度参考；完整新作的旁白、画面和字幕以各自工程回执为准。
 
-## 为什么值得用
+| 判断先于装饰 | 事实与细节可见 | 同任务比较结果 |
+| --- | --- | --- |
+| ![移开排行榜，先看任务](docs/assets/showcase/2026-09/01-task-first.webp) | ![核事实，看细节](docs/assets/showcase/2026-09/02-evidence-check.webp) | ![同任务，算返工](docs/assets/showcase/2026-09/03-same-task.webp) |
 
-- **把重复工作交给流程。** 每次换的是内容，不必重新搭配音、字幕、渲染和归档工具。
-- **文稿有理解，画面有重点。** 当前文稿统一由 Astra 直接编写；正文根据输入自由组织，不调用“人话”“去 AI 味”类 Skill。开头和结尾的协作规则另行讨论，不擅自套新模板。
-- **声音决定时间。** 先锁定最终旁白，再用真实词级时间戳做字幕和场景对齐，不按字数猜时长。
-- **能检查，也能接着做。** 计划、音频和素材带哈希；失败保留证据，从未完成阶段恢复。已通过的资产不随意重做。
-- **低成本来自分工。** 配音与合成尽量本地运行，按需使用生图和 ASR。不开数字人，就不产生对应生成开销。
+海绵必须在场景里真正做事：移开榜单、核对证据、记录返工。手写字长在插画里，字幕另由音频时间轴驱动。画面为完整原生生成的 1672×941 PNG，公开展示图只做 WebP 编码；最终视频输出 1920×1080。
 
-“约 4 毛、约 20 分钟”是历史基础快线的特定条件估算，不是本版逐场景新生图的实测总价或时长承诺。订阅、图像额度、硬件、首次部署、返工和人工审阅应分别计算。开源代码不等于所有外部服务免费。
+## 它解决什么
 
-## 从内容到成片
+很多创作者的难点不是没有文稿，而是每次出片都要重新拼一遍工具：文章在哪、图该落在哪段、配音做到哪、字幕有没有跟上真实语速、最后文件能否复查。BoomEarth 把这些交接变成有边界的产物和校验。
 
-```text
-文稿 / 文章 / 视频 / GitHub 项目
-              ↓
-私有采集与事实整理（现成文稿可跳过采集）
-              ↓
-Astra 理解并写稿 → 定稿锁定
-              ↓
-逐场景语义规划 → 全幅海绵插画与原生手写字
-              ↓
-本地 IndexTTS2 配音 → 锁定最终 WAV
-              ↓
-最终音频词级 ASR → 口播断句 → 单行字幕
-              ↓
-组件动效与音画对齐 → 1080p 合成
-              ↓
-逐场景检查 / 全片解码 / 交付检查 → 归档与封面
+| 环节 | 系统处理的事 | 创作者保留的决定 |
+| --- | --- | --- |
+| 内容入口 | 识别 X、视频、GitHub、现成文稿；采集失败时按故障类型修复并重新验收完整来源 | 来源是否可信、核心观点是什么 |
+| 文稿 | 按事实和表达目标写稿；定稿后用 SHA-256 锁住全文 | 口吻、立场、最终定稿 |
+| 画面 | 按段落语义规划动作与物件，生成完整场景，逐图检查角色、文字、留白和禁用意象 | 哪个画面真正把话说明白 |
+| 声音与字幕 | 本地 IndexTTS2 配音；最终 WAV 只做一次词级 ASR，再按口播语义断句 | 声音参考与字幕重点 |
+| 动效与交付 | 文字和卡片随有效内容定尺寸；手持铅笔的绘制指针、稀疏重点底色、逐场景 QC、全片解码、归档 | 成片是否达到自己的发布标准 |
+
+### 一条能继续往下走的生产线
+
+```mermaid
+flowchart LR
+    A[文章 / 视频 / GitHub / 定稿] --> B[来源完整性验收]
+    B --> C[写稿与人工定稿]
+    C --> D[锁定旁白合同]
+    D --> E[逐场景语义插画]
+    D --> F[本地 IndexTTS2]
+    E --> G[场景与动效]
+    F --> H[最终 WAV → 词级 ASR]
+    H --> I[口播字幕]
+    G --> J[正式渲染]
+    I --> J
+    J --> K[画面 / 音频 / 字幕 QC]
+    K --> L[归档 + 3:4 封面]
 ```
 
-Skills 负责专业步骤和任务路由，脚本负责执行，核心模块负责合同与校验。推荐在能读取项目文件、执行命令并访问所需媒体工具的 Agent 环境中使用；它不是一个装好即可无配置运行的“一键 SaaS”。
+插画与本地配音在旁白合同确定后并行。配音可能持续较久，按 30 分钟节拍检查已完成片段和异常，期间继续做画面；只有最终 WAV、manifest 和音色来源校验通过，才进入 ASR 与正式时间轴。中断后从项目 note、真实文件和哈希恢复，不因换会话重复合成已验收素材。
 
-## 快速开始
+### 画面有对应，动效有节制
 
-准备 Git、uv、Python 3.11、Node.js 22+、FFmpeg（含 ffprobe）。以下命令安装本项目依赖，不会替你下载 TTS 模型或开通付费服务：
+默认是 `sponge-host-handdrawn-v1`：白底、暖黄方块海绵、铅笔线和少量彩铅。每张图要有角色参与当下语义动作，保留图片原生手写标签。屏幕的视觉重心靠近横向三分之二线，画面约占 85%；底部留给单行字幕。绘制过程使用小手持铅笔的指针，尽量让显现区域跟着这句旁白走。
+
+字幕边框跟随实际文字宽度，卡片并列时保持统一尺度，只突出当前说到的那张。底色仅标注少量核心词；句中逗号以空格呈现，行尾只保留问号。字幕的词时间来自最终音频，不按字数估时。详见 [字幕与断句规则](.agents/skills/katerj-audio-subtitles/SKILL.md) 和 [动效导演](.agents/skills/katerj-motion-director/SKILL.md)。
+
+## 开始部署
+
+当前主要在 Windows 环境验证。先准备 Git、Python 3.11、[uv](https://docs.astral.sh/uv/)、Node.js 22+、FFmpeg 与 ffprobe；随后安装仓库依赖：
 
 ```powershell
 git clone https://github.com/kaiteJiang/BoomEarth.git
 cd BoomEarth
+uv python install 3.11
 uv sync --dev
 npm ci
 uv run pytest tests/test_config.py -q
 npm run hf:doctor
 ```
 
-接下来按[完整教程](docs/DEPLOYMENT-AND-USAGE.md)接通本地 IndexTTS2、你自己的授权音色、图像生成能力和最终字幕 ASR。首次先做 20–30 秒小片验证，再扩展到完整视频。
+这一步只验证基础代码和渲染环境。要制作有声视频，还需按 [部署与使用教程](docs/DEPLOYMENT-AND-USAGE.md)接入自己的 IndexTTS2 环境、授权参考录音、可用的图像生成能力及最终音频 ASR。仓库不会附赠模型权重、作者音色、服务密钥或 API 额度。第一次建议先做 20–30 秒小片，确认声音、图片、字幕和渲染四条链路都通，再做长片。
 
-## 当前默认合同
+## 阅读地图
 
-| 部分 | 当前选择 |
+| 想做的事 | 从这里开始 |
 | --- | --- |
-| 文稿 | Astra 直接写；定稿后不擅改词句 |
-| 视觉 | `sponge-host-handdrawn-v1`；只替换小黑角色，其余沿用本体 |
-| 文字 | 插画原生手写标签；不得用系统标签替代 |
-| 清晰度 | 每场完整生成，记录实际像素和显示倍率，不放大设定图局部 |
-| 动效 | 稳定背景、组件级 reveal/wipe/fade 与语义动作 |
-| 配音 | 本地 IndexTTS2；部署者配置自己的授权参考音频 |
-| 字幕 | 精确最终音频、真实词时间戳、单行、固定底部锚点 |
-| 数字人 | 默认关闭；显式选择后才进入对应路线 |
-| 视频 | 1920×1080 / 30fps / H.264 / AAC |
-| 归档 | 成片、工程、素材、字幕和 QC 分层保存 |
+| 新对话做视频，或恢复中断项目 | [制作 runbook](docs/VIDEO-PRODUCTION-RUNBOOK.md) 与 [总控 Skill](.agents/skills/ra-source-to-video/SKILL.md) |
+| 理解失败后的采集修复和 30 分钟配音节拍 | [连续制作编排](docs/VIDEO-CONTINUOUS-ORCHESTRATION.md) 与 [来源修复经验](docs/SOURCE-RECOVERY-LEDGER.md) |
+| 看海绵角色与插画约束 | [角色外观合同](video-daheihuang/sponge-ip/DESIGN.md) 与 [插画 Skill](.agents/skills/ra-video-illustrations/SKILL.md) |
+| 查完整安装、音色和外部能力配置 | [部署与使用教程](docs/DEPLOYMENT-AND-USAGE.md) |
+| 查项目历史与兼容入口 | [项目历史](docs/PROJECT-HISTORY.md) 与 [Skill 迁移](.agents/skills/KATERJ-MIGRATION.md) |
 
-历史小黑、小黄及其他注册主题保留；新默认不改变旧项目已锁定的合同。当前规则见 [AGENTS.md](AGENTS.md) 和 [海绵外观合同](video-daheihuang/sponge-ip/DESIGN.md)，优先于历史 Skill 默认值。
+核心合同和验证器在 `src/boomearth/`，执行脚本在 `automation/scripts/`，离线回归在 `tests/`。本地 `01-内容生产/视频工作台/` 存放私有来源与生产工程，不作为公开仓库的示例目录整体推送。
 
-## 仓库导航
+## 设计边界
 
-- `.agents/skills/`：总编排、来源、插画、声音字幕、导演和交付；旧名称保留兼容。
-- `automation/scripts/`：采集、编译、渲染、验证与恢复命令。
-- `src/boomearth/`：输入合同、素材证据、时间轴与核心模块。
-- `tests/`：离线校验与回归测试；默认不调用线上服务。
-- `docs/assets/sponge/2026-09/`：本次明确公开的样片、插画、角色参考和教程封面。
-- 本地 `01-内容生产/视频工作台/`：私有输入、待制作、制作中和已制作归档；不整库上传。
+定稿前可以改写，定稿后不能私自改词。来源只读，完整性不够就继续诊断，不拿标题或残片冒充原文。图片要有真实生成回执和逐场景语义检查；技术通过也不代替创作者观看成片。默认不使用数字人，也不自动向平台发布。
 
-更多说明：[项目历史](docs/PROJECT-HISTORY.md)、[Skill 兼容迁移](.agents/skills/KATERJ-MIGRATION.md)、[许可证边界](LICENSE-NOTES.md)。历史路线与旧状态记录不应覆盖当前代码、合同和实测证据。
+公开仓库只放代码、文档和经过选定的演示画面。`.env`、Cookie、私人来源、Provider 原始响应、音色参考录音和生产中的整套工程都留在本地。原创代码和项目自有 Skill 见 [MIT LICENSE](LICENSE)；第三方模型、字体与素材仍遵循各自许可，详情见 [LICENSE-NOTES.md](LICENSE-NOTES.md)。
 
-## 公开与私有
+<div align="center">
 
-发布代码、公共文档和经过明确选定的演示素材，不发布 `.env`、Cookie、私有 ID、原始来源、逐字稿、Provider 响应或音色克隆参考录音。本次公开视频包含成片旁白，不包含可独立下载的私人音色参考文件。
+**写清楚一件事，再让声音、画面和时间轴一起把它讲出来。**
 
-## 许可证与致谢
-
-原创代码与项目自有 `katerj-*` Skill 见 [MIT LICENSE](LICENSE)。第三方脚本、字体、模型和素材仍按各自许可证使用，详情见 [LICENSE-NOTES.md](LICENSE-NOTES.md)。公开演示不构成独占角色商标或第三方模型的重新许可。
-
-感谢卡神、雪踏、苍何、ChenShuo 以及开源社区分享的方法与实践。BoomEarth 的价值，是把这些启发持续落成一套能用、能查、能迭代的创作工作流。
+</div>

@@ -20,6 +20,7 @@ from boomearth.workbench.handoff_compiler import (
     render_source_free_handoff,
 )
 from boomearth.workbench.rewrite_package import (
+    DIRECT_REQUIRED_REVIEWS,
     REQUIRED_REVIEWS,
     load_rewrite_candidate,
     prepare_rewrite_brief,
@@ -250,8 +251,8 @@ def _complete_rewrite_work(
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-13T09:10:11Z",
-            "reviews": {name: review_status for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: review_status for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     return candidate, review
@@ -339,8 +340,8 @@ def _complete_article_rewrite_work(root: Path) -> tuple[Path, Path]:
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-13T09:10:11Z",
-            "reviews": {name: "pass" for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: "pass" for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     return candidate, review
@@ -393,10 +394,17 @@ def _upgrade_rewrite_to_opening_contract_v2(
     review_value = json.loads(review.read_text("utf-8"))
     review_value["candidate_sha256"] = sha256_file(candidate)
     review_value["schema_version"] = review_schema_version
+    review_value["reviews"] = {name: "pass" for name in REQUIRED_REVIEWS}
     review.write_text(
         json.dumps(review_value, ensure_ascii=False, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+    brief_path = candidate.parent / "rewrite-brief.json"
+    brief = json.loads(brief_path.read_text("utf-8"))
+    brief["required_reviews"] = list(REQUIRED_REVIEWS)
+    brief_path.write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
 
 
 def _complete_manual_text_rewrite_work(root: Path) -> tuple[Path, Path]:
@@ -521,8 +529,8 @@ def _complete_manual_text_rewrite_work(root: Path) -> tuple[Path, Path]:
         {
             "candidate_sha256": sha256_file(candidate),
             "reviewed_at": "2026-08-13T09:10:11Z",
-            "reviews": {name: "pass" for name in REQUIRED_REVIEWS},
-            "schema_version": 1,
+            "reviews": {name: "pass" for name in DIRECT_REQUIRED_REVIEWS},
+            "schema_version": 3,
         },
     )
     return candidate, review
@@ -622,6 +630,11 @@ def test_compiler_publishes_p1_compatible_source_free_handoff(tmp_path: Path) ->
     assert publication.relative_path == "待制作/source-free-project/交接稿.md"
     assert 'ratio: "16:9"' in text
     assert 'voice: "user-indextts2-black-gold-v3"' in text
+    assert 'avatar: "none"' in text
+    original = load_rewrite_candidate(candidate)
+    assert [segment.text for segment in parse_handoff_segments(text)] == [
+        segment.text for segment in original.segments
+    ]
     assert 'covers: "punk-cover-giant-title-3x4-v1"' in text
     assert "来源内容从最基本事实" not in text
     assert WashEventLedger(tmp_path).status(WORK_ID) == "handoff_ready"
@@ -666,6 +679,40 @@ def test_compiler_publishes_opening_contract_v2_without_private_metadata(
     assert "智能助手最容易踩坑的不是提示词" in handoff
     assert "opening_contract" not in handoff
     assert "jl-multiplatform-titles" not in handoff
+    assert "avatar:" not in handoff
+
+
+@pytest.mark.parametrize("legacy_brief", [False, True])
+def test_compiler_rejects_mixing_direct_and_legacy_reviews(
+    tmp_path: Path, legacy_brief: bool
+) -> None:
+    candidate, review = _complete_rewrite_work(tmp_path)
+    if legacy_brief:
+        path = candidate.parent / "rewrite-brief.json"
+        value = json.loads(path.read_text("utf-8"))
+        value["required_reviews"] = list(REQUIRED_REVIEWS)
+    else:
+        path = review
+        value = json.loads(path.read_text("utf-8"))
+        value["schema_version"] = 1
+        value["reviews"] = {name: "pass" for name in REQUIRED_REVIEWS}
+    path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(HandoffCompilerError, match="^rewrite-review-not-passed$"):
+        compile_source_handoff(tmp_path, WORK_ID, candidate, review)
+
+
+def test_compiler_still_accepts_legacy_schema_one(tmp_path: Path) -> None:
+    candidate, review = _complete_rewrite_work(tmp_path)
+    path = candidate.parent / "rewrite-brief.json"
+    brief = json.loads(path.read_text("utf-8"))
+    brief["required_reviews"] = list(REQUIRED_REVIEWS)
+    path.write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+    value = json.loads(review.read_text("utf-8"))
+    value["schema_version"] = 1
+    value["reviews"] = {name: "pass" for name in REQUIRED_REVIEWS}
+    review.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    publication = compile_source_handoff(tmp_path, WORK_ID, candidate, review)
+    assert publication.handoff_sha256
 
 
 def test_compiler_resolves_default_visual_to_sponge(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 # 视频画面 QC
 
-- 原图可解码，PNG/JPEG/WebP，16:9，至少 1920×1080。
+- 原图可解码，16:9。新海绵native-source为PNG、至少1440×810、比例容差0.01，显示倍率不超过1；其他与旧合同保持各自尺寸门槛。
 - 缩小到 960×540 后主旨仍一眼可懂。
 - 主体在右中视觉框内不被裁切；底部 150px 保持可用。
 - 没有页面标题、字幕、水印、大段文字、完整 PPT、知识板或海报排版。
@@ -34,7 +34,8 @@ V4 先执行上述八项通用检查，再只执行所选主题的精确专属�
 - `four-panel-comic-explainer`：`exactly_four_panels`、`reading_order_clear`、`beats_continuous`、`character_consistent`、`one_event_per_panel`、`lower_panels_caption_safe`。
 - `blue-black-whiteboard-explainer`：`marker_material_clear`、`blue_black_palette_only`、`structure_type_clear`、`reading_path_clear`、`not_ppt_page`、`not_character_led`。
 - `xiaohuang-warm-first-v1`：`xiaohuang_identity_consistent`、`character_performs_action`、`native_labels_correct`、`warm_white_canvas`、`not_system_label_overlay`。
+- `sponge-host-handdrawn-v1`：`sponge_identity_consistent`、`character_performs_action`、`native_labels_correct`、`white_canvas`、`not_system_label_overlay`。
 
-正式图字节必须与候选 01 或候选 02 之一完全一致。主审打开 3840×2160 实图后记录相关性理由；fixture、纯色占位图和仅有文件哈希的自动检查不能替代真实多模态判断。
+正式图字节必须与候选01或02之一完全一致。主审打开实际原图记录相关性理由；新海绵native-source记录真实宽高及显示倍率，不能要求先上采样到4K。fixture、纯色占位图和只有文件哈希的检查不能替代多模态判断。海绵还要检查成片边缘融合、原生字完整可见、无程序标题/卡片/标签盖图。
 
 主题库真实验收还必须由 `multimodal-review` 在 contact sheet 上记录所选主题与相邻主题在线条、材质、结构或叙事方式上的可见差异。不同文件哈希不能代替视觉区分结论；每个 prompt、主题审核记录和共享测试判断必须绑定同一个 claim SHA-256。

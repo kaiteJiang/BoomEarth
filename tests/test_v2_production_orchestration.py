@@ -41,6 +41,22 @@ def _load_orchestrator():
     return module
 
 
+def test_render_command_gets_longer_timeout_than_preflight_checks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orchestrator = _load_orchestrator()
+    timeouts: list[int] = []
+
+    def fake_run(_argv: list[str], **kwargs: object) -> SimpleNamespace:
+        timeouts.append(int(kwargs["timeout"]))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(orchestrator.subprocess, "run", fake_run)
+    orchestrator._run_command(["node", "hyperframes", "lint", "project"], cwd=tmp_path)
+    orchestrator._run_command(["node", "hyperframes", "render", "project"], cwd=tmp_path)
+    assert timeouts == [240, 7200]
+
+
 def test_caption_render_qc_accepts_registered_anchor_dark_panel(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

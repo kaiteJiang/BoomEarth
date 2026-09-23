@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from boomearth.providers.volcengine_asr import ASRWord
+from boomearth.captions.display import format_caption_text
 
 
 TIMING_SOURCE = "volcengine-word-timestamps"
@@ -165,9 +166,9 @@ def _caption_word_indexes(
 
 
 def _display_text(text: str) -> str:
-    """Keep approved words while removing punctuation from on-screen captions."""
+    """Keep approved words and apply the on-screen punctuation policy."""
 
-    return "".join(character for character in text if character not in _PUNCTUATION).strip()
+    return format_caption_text(text)
 
 
 def _semantic_caption_ranges(

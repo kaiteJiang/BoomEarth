@@ -53,7 +53,7 @@ def _module(path: Path, name: str):
     return module
 
 
-def _profiled_render_project(root: Path, theme_id: str) -> Path:
+def _profiled_render_project(root: Path, theme_id: str, *, native: bool = False) -> Path:
     engineering = root / "工程"
     for stale in (
         engineering / "content-plan.json",
@@ -68,7 +68,7 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
         engineering / "assets" / "profiled-illustrations" / theme_id
     )
     for index in range(1, 5):
-        Image.new("RGB", (3840, 2160), (240 - index, 234, 220)).save(
+        Image.new("RGB", (1672, 941) if native else (3840, 2160), (240 - index, 234, 220)).save(
             theme_root / f"scene-{index:02d}.png", format="PNG"
         )
     candidate_path = engineering / "content-plan.candidate.json"
@@ -104,7 +104,7 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
             "visual_system: profiled-illustration-v4\n"
             f"visual_theme: {theme_id}\n"
             "ratio: 16:9\n"
-            "target_size: 3840x2160\n"
+            f"target_size: {'native-source' if native else '3840x2160'}\n"
             f"text_policy: {text_policy}\n"
             "caption_safe_zone: bottom-150px\n"
             "---\n\n"
@@ -171,8 +171,8 @@ def _profiled_render_project(root: Path, theme_id: str) -> Path:
                 "candidate_artifacts": [generated_artifact],
                 "selected_asset_path": selected_relative,
                 "selected_asset_sha256": _sha256(selected),
-                "width": 3840,
-                "height": 2160,
+                "width": 1672 if native else 3840,
+                "height": 941 if native else 2160,
                 "format": "png",
                 "ratio": "16:9",
                 "qc_status": "pass",
@@ -248,6 +248,24 @@ def test_renderer_loads_only_the_selected_profiled_theme(
     }
     assert copied_themes == {theme_id}
     assert (prepared.output_dir / "motion-plan.json").is_file()
+    assert (prepared.output_dir / "illustration-manifest.json").is_file()
+
+
+def test_native_sponge_preserves_original_through_generation_manifest_renderer(v3_project: Path) -> None:
+    root = _profiled_render_project(v3_project, "sponge-host-handdrawn-v1", native=True)
+    prepared = prepare_content_render_project(
+        project_root=root, output_dir=root / "工程" / "render-project", repo_root=ROOT,
+    )
+    relative = Path("profiled-illustrations/sponge-host-handdrawn-v1/scene-01.png")
+    original = root / "工程/assets" / relative
+    copied = prepared.output_dir / "assets" / relative
+    assert copied.read_bytes() == original.read_bytes()
+    with Image.open(copied) as image:
+        assert image.size == (1672, 941)
+    html = (prepared.output_dir / "index.html").read_text(encoding="utf-8")
+    assert "sponge-native-source" in html
+    assert "width: 1632px; height: 918px" in html
+    assert "transform: none !important" in html
     assert (prepared.output_dir / "illustration-manifest.json").is_file()
 
 

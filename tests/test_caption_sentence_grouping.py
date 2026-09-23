@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from boomearth.captions.align import align_display_script, group_caption_phrases
+from boomearth.captions.display import format_caption_text
+from boomearth.captions.qc import _subtitle_text
 from boomearth.providers.volcengine_asr import ASRWord
 
 
@@ -56,7 +58,7 @@ def test_caption_grouping_combines_short_enumeration_items_until_the_line_limit(
     )
 
     assert [caption.text for caption in captions] == [
-        "定时检查信息自动整理网盘",
+        "定时检查信息 自动整理网盘",
         "根据可靠资料做法律检索",
         "读取会议并生成总结",
     ]
@@ -80,7 +82,7 @@ def test_caption_grouping_combines_short_semantic_clauses_without_crossing_a_sen
 
     assert [caption.text for caption in captions] == [
         "这个更新值不值得用",
-        "得把它能做什么怎么协作",
+        "得把它能做什么 怎么协作",
         "权限怎么给放在一起看",
     ]
 
@@ -120,3 +122,23 @@ def test_caption_grouping_never_merges_across_a_terminal_sentence_boundary() -> 
         "先说它是什么",
         "普通聊天工具主要给答案",
     ]
+
+
+def test_display_punctuation_uses_comma_space_and_keeps_final_question() -> None:
+    assert format_caption_text("GPT-6 Sol，Luna，怎么选？") == "GPT-6 Sol Luna 怎么选？"
+    assert format_caption_text("版本 5.5，继续看。") == "版本 5.5 继续看"
+    assert format_caption_text("这句结束！") == "这句结束"
+    assert format_caption_text("这句结束，") == "这句结束"
+    assert format_caption_text("他说：你会选哪个？！”") == "他说：你会选哪个？"
+    assert format_caption_text("C++、Node.js，都要讲。") == "C++ Node.js 都要讲"
+
+
+def test_word_timed_caption_keeps_comma_space_without_changing_timing() -> None:
+    script = "你想省时间，就先找返工点？"
+    words = (ASRWord("你想省时间", 0.0, 1.0), ASRWord("就先找返工点", 1.2, 2.4))
+    captions = group_caption_phrases(script, words, align_display_script(script, words))
+    assert [(cue.start, cue.end, cue.text) for cue in captions] == [
+        (0.0, 2.4, "你想省时间 就先找返工点？")
+    ]
+    assert "你想省时间 就先找返工点？" in _subtitle_text(captions, is_vtt=False)
+    assert "你想省时间 就先找返工点？" in _subtitle_text(captions, is_vtt=True)

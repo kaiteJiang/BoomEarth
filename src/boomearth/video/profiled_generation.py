@@ -299,6 +299,37 @@ def _validated_png(payload: bytes) -> None:
         raise ProfiledGenerationError("profiled-generation-result-invalid") from None
 
 
+def is_native_sponge_prompt(theme_id: str, payload: bytes) -> bool:
+    """Opt in only new sponge prompts; historical 4K contracts stay unchanged."""
+    normalized = payload.replace(b"\r\n", b"\n")
+    header, separator, _body = normalized[4:].partition(b"\n---\n")
+    return (
+        theme_id == "sponge-host-handdrawn-v1"
+        and normalized.startswith(b"---\n") and bool(separator)
+        and b"target_size: native-source" in header.split(b"\n")
+    )
+
+
+def native_sponge_dimensions(width: object, height: object) -> bool:
+    return (
+        type(width) is int and type(height) is int
+        and width >= 1440 and height >= 810
+        and abs(width / height - 16 / 9) <= 0.01
+    )
+
+
+def _native_sponge_png(payload: bytes) -> tuple[bytes, int, int]:
+    try:
+        with Image.open(io.BytesIO(payload)) as image:
+            image.load()
+            width, height = image.size
+            if image.format != "PNG" or not native_sponge_dimensions(width, height):
+                raise ProfiledGenerationError("profiled-generation-result-invalid")
+    except (TypeError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
+        raise ProfiledGenerationError("profiled-generation-result-invalid") from None
+    return payload, width, height
+
+
 def _adapt_history_png(payload: bytes) -> tuple[bytes, int, int]:
     if not isinstance(payload, bytes) or not payload:
         raise ProfiledGenerationError("profiled-generation-result-invalid")
@@ -481,8 +512,11 @@ def complete_profiled_generation_call(
         raise ProfiledGenerationError("profiled-generation-input-invalid")
     source_evidence: dict[str, object] = {}
     published_payload = candidate_payload
-    if adapt_runtime_native:
-        published_payload, source_width, source_height = _adapt_runtime_native_png(
+    prompt = capture_regular_file(root / ticket.prompt_path, within=root)
+    native_sponge = is_native_sponge_prompt(theme_id, prompt.payload)
+    if adapt_runtime_native or native_sponge:
+        transform = _native_sponge_png if native_sponge else _adapt_runtime_native_png
+        published_payload, source_width, source_height = transform(
             candidate_payload
         )
         source_path = _runtime_original_path(theme_id, scene_id, candidate_index)
@@ -492,7 +526,7 @@ def complete_profiled_generation_call(
             "source_original_sha256": hashlib.sha256(candidate_payload).hexdigest(),
             "source_original_width": source_width,
             "source_original_height": source_height,
-            "transform": "ImageOps.fit RGB 3840x2160 LANCZOS",
+            "transform": "identity native-source" if native_sponge else "ImageOps.fit RGB 3840x2160 LANCZOS",
         }
     else:
         _validated_png(candidate_payload)
@@ -1064,7 +1098,9 @@ def validate_profiled_generation_evidence(
             original = capture_regular_file(
                 root / Path(*Path(original_relative).parts), within=root
             )
-            adapted_payload, width, height = _adapt_runtime_native_png(
+            native_sponge = is_native_sponge_prompt(theme_id, prompt_snapshot.payload)
+            transform = _native_sponge_png if native_sponge else _adapt_runtime_native_png
+            adapted_payload, width, height = transform(
                 original.payload
             )
         except (ArtifactError, ProfiledGenerationError):
@@ -1077,12 +1113,14 @@ def validate_profiled_generation_evidence(
                 "source_original_sha256": original.sha256,
                 "source_original_width": width,
                 "source_original_height": height,
-                "transform": "ImageOps.fit RGB 3840x2160 LANCZOS",
+                "transform": "identity native-source" if native_sponge else "ImageOps.fit RGB 3840x2160 LANCZOS",
             }
         )
         if hashlib.sha256(adapted_payload).hexdigest() != candidate_sha256:
             raise ProfiledGenerationError(
                 "profiled-generation-evidence-invalid"
             )
+    if is_native_sponge_prompt(theme_id, prompt_snapshot.payload) and set(receipt) != _RUNTIME_ADAPTED_RECEIPT_KEYS:
+        raise ProfiledGenerationError("profiled-generation-evidence-invalid")
     if intent != expected_intent or receipt != expected_receipt:
         raise ProfiledGenerationError("profiled-generation-evidence-invalid")

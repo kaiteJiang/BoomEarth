@@ -437,6 +437,23 @@ def test_equivalent_aspect_ratio_normalization_does_not_block_timeline() -> None
     }
 
 
+@pytest.mark.parametrize("script_token,asr_tokens,expected", [
+    ("会话", ("绘", "画"), True),
+    ("电话", ("绘", "画"), False),
+    ("会议", ("绘", "画"), False),
+])
+def test_session_homophone_requires_exact_script_gap(script_token, asr_tokens, expected) -> None:
+    script = f"前{script_token}后"
+    words = tuple(
+        ASRWord(text=text, start=index * 0.1, end=(index + 1) * 0.1)
+        for index, text in enumerate(("前", *asr_tokens, "后"))
+    )
+    assert _equivalent_unmapped_run(
+        word_indexes=(1, 2), words=words,
+        alignment=align_display_script(script, words), script=script,
+    ) is expected
+
+
 def test_equivalent_new_build_provider_substitution_does_not_block_timeline() -> None:
     script = "前new建后"
     words = (
@@ -465,6 +482,7 @@ def test_equivalent_new_build_provider_substitution_does_not_block_timeline() ->
         ("锁", "所"),
         ("粉", "分"),
         ("做", "作"),
+        ("叉", "差"),
     ],
 )
 def test_equivalent_common_asr_substitution_does_not_block_timeline(
@@ -620,6 +638,20 @@ def test_seven_single_character_unmapped_asr_noises_block_timeline(
 
     with pytest.raises(SceneTimelineError, match="word alignment is invalid"):
         build_scene_timeline(project_root=project)
+
+
+def test_percentage_asr_token_matches_spoken_value_but_not_a_different_value() -> None:
+    script = "前百分之三十三点二后"
+    for token, expected in (("33.2%", True), ("33.3%", False)):
+        words = (
+            ASRWord("前", 0.0, 0.1),
+            ASRWord(token, 0.1, 0.9),
+            ASRWord("后", 0.9, 1.0),
+        )
+        alignment = align_display_script(script, words)
+        assert _equivalent_unmapped_run(
+            word_indexes=(1,), words=words, alignment=alignment, script=script
+        ) is expected
 
 
 @pytest.mark.parametrize(

@@ -18,9 +18,10 @@ Read `automation/config/tts-routing.json`. New productions use local IndexTTS2 v
 1. Validate mixed Chinese/English names against the pronunciation lexicon before synthesis.
 2. Build a JSONL segment contract containing text and intentional tail silence.
 3. Run the existing IndexTTS2 helper in dry-run mode to validate environment, model, reference, and batch.
-4. Render PCM WAV, preserve the pre-speed raw audit WAV, then apply pitch-preserving 1.12× tempo.
-5. Publish `voice_manifest.json` with provider, model, voice ID, reference hash, segment-contract hash, output hash, speed, pronunciation contract, and `used_fallback=false`.
-6. Treat the exact final WAV as the only later ASR and avatar audio source.
+4. Start one render in the background after dry-run; record the private process/log pointer, approved script hash, segment count, start and next-check times in the production note. Run independent scene/image/cover preparation concurrently. Check progress only every 30 minutes (or on a clear failure signal): count completed private `raw/segment-*.wav` files against the contract and report once; do not poll between checks or restart a healthy job. For work spanning conversations, schedule a 30-minute thread heartbeat when the render starts and stop it after completion/failure. Details: [continuous orchestration](../../../docs/VIDEO-CONTINUOUS-ORCHESTRATION.md).
+5. Render PCM WAV, preserve the pre-speed raw audit WAV, then apply pitch-preserving 1.12× tempo.
+6. Publish `voice_manifest.json` with provider, model, voice ID, reference hash, segment-contract hash, output hash, speed, pronunciation contract, and `used_fallback=false`.
+7. Treat the exact final WAV as the only later ASR and avatar audio source. Only after full manifest/provenance/PCM/hash validation may the director continue to ASR.
 
 ## Prohibited fallbacks
 

@@ -1,6 +1,15 @@
 # 视频插画主题库
 
-本表是 BoomEarth 的稳定中文调用合同。用户明确说出某条中文指令时，按对应目标执行；未明确指定时，新建视频默认使用 `xiaohei-white-first-v1`，并路由到 `katerj-xiaohei-illustrations`。五个 `profiled-illustration-v4` 主题和 `semantic-handdrawn-v3/type-led` 仅允许显式选择，绝不是回退方案。历史项目不迁移。
+本表是稳定中文调用合同。未指定时默认 `sponge-host-handdrawn-v1`，经 `ra-video-illustrations`，只继承小黑本体并替换角色；其他主题显式选择，不是失败回退。历史项目不迁移，精确注册值以 illustration_themes.py 为准。
+
+## 当前默认：方块海绵插画
+
+- 中文指令：`这条视频使用方块海绵插画风格。`
+- ID：`sponge-host-handdrawn-v1`；schema4/profiled-illustration-v4，manifest schema3。
+- prompt 风格：`white-hand-drawn-sponge-host-with-native-chinese-labels`。
+- 原生完整场景、纯白融合、手绘短字、角色亲自完成语义动作；身份依据根 video-daheihuang/sponge-ip/DESIGN.md。
+- 新prompt：target_size native-source，text_policy embedded；至少1440×810，16:9容差0.01，保留实际像素，不插值放大。旧3840合同仍独立保留。
+- 专属QC：sponge_identity_consistent、character_performs_action、native_labels_correct、white_canvas、not_system_label_overlay。
 
 ## 既有四种入口
 
@@ -24,7 +33,7 @@
 - 中文指令：`这条视频使用动态文字卡片风格，画面以文字关系、路径和轻量图标为主。`
 - 目标：`semantic-handdrawn-v3/type-led`
 
-## V4 五个独立主题
+## V4 其他五个独立主题
 
 五者统一使用 `profiled-illustration-v4`、content plan schema 4、manifest schema 3、3840×2160、16:9 和 `bottom-150px`。前四个主题使用 `text_policy: none`，标签由 renderer 根据 `overlay_labels` 绘制；小黄主题使用 `text_policy: embedded`，由图片模型生成经过审核的短手写中文，renderer 禁止重复叠标签。每个主题必须先写 prompt，再生成候选，再做八项通用 QC 与本主题专属 QC。
 

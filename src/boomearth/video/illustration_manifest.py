@@ -18,6 +18,7 @@ from boomearth.video.illustration_themes import (
     get_theme,
 )
 from boomearth.video.profiled_generation import (
+    native_sponge_dimensions,
     GENERATION_ARTIFACT_KEYS,
     HISTORY_ADAPTATION_ARTIFACT_KEYS,
     ProfiledGenerationError,
@@ -438,7 +439,11 @@ def _v4_prompt_contract(payload: bytes) -> dict[str, str]:
         )
         or values["visual_system"] != PROFILED_VISUAL_SYSTEM
         or values["ratio"] != "16:9"
-        or values["target_size"] != "3840x2160"
+        or values["target_size"] not in (
+            {"3840x2160", "native-source"}
+            if values["visual_theme"] == "sponge-host-handdrawn-v1"
+            else {"3840x2160"}
+        )
         or values["text_policy"]
         != (
             "embedded"
@@ -1150,9 +1155,12 @@ def _validate_v4_manifest(
             or _DIGEST.fullmatch(raw["contract_sha256"]) is None
             or not isinstance(raw["candidate_artifacts"], list)
             or not 1 <= len(raw["candidate_artifacts"]) <= 2
-            or raw["width"] != 3840
+            or not (
+                native_sponge_dimensions(raw["width"], raw["height"])
+                if theme.id == "sponge-host-handdrawn-v1"
+                else (raw["width"], raw["height"]) == (3840, 2160)
+            )
             or isinstance(raw["width"], bool)
-            or raw["height"] != 2160
             or isinstance(raw["height"], bool)
             or raw["format"] != "png"
         ):
@@ -1173,6 +1181,8 @@ def _validate_v4_manifest(
         if contract_snapshot.sha256 != raw["contract_sha256"]:
             raise IllustrationManifestError("illustration-input-changed")
         prompt_values = _v4_prompt_contract(contract_snapshot.payload)
+        if prompt_values["target_size"] != "native-source" and (raw["width"], raw["height"]) != (3840, 2160):
+            raise IllustrationManifestError("illustration-scene-invalid")
         if (
             prompt_values["scene_id"] != scene.id
             or prompt_values["visual_type"] != scene.visual_type
@@ -1266,9 +1276,12 @@ def _validate_v4_manifest(
                 or generation_prompt_values["visual_style"] != theme.id
                 or generation_prompt_values["visual_mode"] != scene.visual_mode
                 or generation_prompt_values["visual_theme"] != theme.id
+                or generation_prompt_values["target_size"] != prompt_values["target_size"]
             ):
                 raise IllustrationManifestError("illustration-prompt-invalid")
             try:
+                if prompt_values["target_size"] == "native-source" and set(artifact) != GENERATION_ARTIFACT_KEYS:
+                    raise ProfiledGenerationError("profiled-generation-evidence-invalid")
                 if set(artifact) == GENERATION_ARTIFACT_KEYS:
                     validate_profiled_generation_evidence(
                         project_root=root,
@@ -1324,8 +1337,8 @@ def _validate_v4_manifest(
             _image_contract(
                 candidate_snapshot,
                 relative=candidate_relative,
-                expected_width=3840,
-                expected_height=2160,
+                expected_width=raw["width"],
+                expected_height=raw["height"],
                 expected_format="png",
             )
             candidate_paths.append(candidate_relative.as_posix())
@@ -1356,8 +1369,8 @@ def _validate_v4_manifest(
         _image_contract(
             selected_snapshot,
             relative=selected_relative,
-            expected_width=3840,
-            expected_height=2160,
+            expected_width=raw["width"],
+            expected_height=raw["height"],
             expected_format="png",
         )
         if selected_snapshot.sha256 not in candidate_hashes:
@@ -1384,8 +1397,8 @@ def _validate_v4_manifest(
                 candidate_sha256=tuple(candidate_hashes),
                 selected_asset_path=selected_relative.as_posix(),
                 selected_asset_sha256=selected_snapshot.sha256,
-                width=3840,
-                height=2160,
+                width=raw["width"],
+                height=raw["height"],
                 format="png",
                 ratio="16:9",
                 qc_status="pass",

@@ -42,6 +42,31 @@ def _load_sample_emitter():
     return module
 
 
+def test_handoff_parser_accepts_source_free_no_avatar_marker_only() -> None:
+    checker = _load_checker()
+    fields = {
+        "status": "制作中",
+        "platform": "douyin",
+        "ratio": "16:9",
+        "duration_target_s": "330",
+        "word_count": "2050",
+        "voice": "user-indextts2-black-gold-v3",
+        "voice_provider": "indextts2-local",
+        "captions": "asr-word-timestamps",
+        "caption_style": "anchor-dark",
+        "visual": "sponge-host-handdrawn-v1",
+        "illustration_skill": "ra-video-illustrations",
+        "archive_slug": "example",
+        "covers": "punk-cover-giant-title-3x4-v1",
+    }
+    base = "---\n" + "\n".join(f"{key}: {value}" for key, value in fields.items())
+    accepted, errors = checker._parse_frontmatter(base + '\navatar: "none"\n---\n')
+    assert errors == []
+    assert accepted["avatar"] == "none"
+    _rejected, errors = checker._parse_frontmatter(base + '\navatar: "external"\n---\n')
+    assert errors == ["rule=handoff-required-fields"]
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
