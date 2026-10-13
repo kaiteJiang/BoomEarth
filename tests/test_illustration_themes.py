@@ -15,6 +15,7 @@ from boomearth.video.illustration_themes import (
 
 
 EXPECTED_THEMES = {
+    "vivid-comic-component-brush-v1",
     "sponge-host-handdrawn-v1",
     "vivid-comic-explainer",
     "engineering-sketch-explainer",
@@ -24,6 +25,11 @@ EXPECTED_THEMES = {
 }
 
 EXPECTED_QC = {
+    "vivid-comic-component-brush-v1": {
+        "character_consistent", "expression_supports_claim", "action_explains_claim",
+        "accent_palette_controlled", "not_decorative_cartoon", "native_labels_correct",
+        "white_canvas", "not_system_label_overlay",
+    },
     "sponge-host-handdrawn-v1": {"sponge_identity_consistent", "character_performs_action", "native_labels_correct", "white_canvas", "not_system_label_overlay"},
     "vivid-comic-explainer": {
         "character_consistent",
@@ -78,6 +84,7 @@ def test_profiled_theme_registry_is_exact_and_immutable() -> None:
         "四格连环漫画",
         "蓝黑白板讲解",
         "小黄温度插画",
+        "鲜彩漫画逐项绘制",
     }
     assert {
         theme_id: set(theme.required_qc)
@@ -89,7 +96,7 @@ def test_profiled_theme_registry_is_exact_and_immutable() -> None:
         THEMES["vivid-comic-explainer"].directory = "changed"  # type: ignore[misc]
 
 
-def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
+def test_chinese_style_catalog_keeps_existing_entries_and_appends_component_comic() -> None:
     assert [entry.chinese_name for entry in CHINESE_STYLE_CATALOG] == [
         "小黑怪诞插画",
         "编辑动效插画",
@@ -101,6 +108,7 @@ def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
         "四格连环漫画",
         "蓝黑白板讲解",
         "小黄温度插画",
+        "鲜彩漫画逐项绘制",
     ]
     assert [entry.target for entry in CHINESE_STYLE_CATALOG[:4]] == [
         "xiaohei-white-first-v1",
@@ -115,8 +123,9 @@ def test_chinese_style_catalog_has_nine_unique_stable_entries() -> None:
         "four-panel-comic-explainer",
         "blue-black-whiteboard-explainer",
         "xiaohuang-warm-first-v1",
+        "vivid-comic-component-brush-v1",
     ]
-    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 10
+    assert len({entry.invocation for entry in CHINESE_STYLE_CATALOG}) == 11
     assert all(entry.invocation.endswith("。") for entry in CHINESE_STYLE_CATALOG)
 
 

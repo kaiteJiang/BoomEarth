@@ -13,6 +13,7 @@ from PIL import Image, UnidentifiedImageError
 from boomearth.video.artifacts import ArtifactError, FileSnapshot, capture_regular_file, load_json_snapshot
 from boomearth.video.content_plan import ContentPlan, ContentPlanError, load_content_plan_snapshot
 from boomearth.video.illustration_themes import (
+    COMPONENT_DRAW_THEMES,
     PROFILED_VISUAL_SYSTEM,
     IllustrationThemeError,
     get_theme,
@@ -441,13 +442,13 @@ def _v4_prompt_contract(payload: bytes) -> dict[str, str]:
         or values["ratio"] != "16:9"
         or values["target_size"] not in (
             {"3840x2160", "native-source"}
-            if values["visual_theme"] == "sponge-host-handdrawn-v1"
+            if values["visual_theme"] in COMPONENT_DRAW_THEMES
             else {"3840x2160"}
         )
         or values["text_policy"]
         != (
             "embedded"
-            if values["visual_theme"] in {"xiaohuang-warm-first-v1", "sponge-host-handdrawn-v1"}
+            if values["visual_theme"] in ({"xiaohuang-warm-first-v1"} | COMPONENT_DRAW_THEMES)
             and values["visual_style"] == values["visual_theme"]
             else "none"
         )
@@ -1157,7 +1158,7 @@ def _validate_v4_manifest(
             or not 1 <= len(raw["candidate_artifacts"]) <= 2
             or not (
                 native_sponge_dimensions(raw["width"], raw["height"])
-                if theme.id == "sponge-host-handdrawn-v1"
+                if theme.id in COMPONENT_DRAW_THEMES
                 else (raw["width"], raw["height"]) == (3840, 2160)
             )
             or isinstance(raw["width"], bool)

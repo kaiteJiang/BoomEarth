@@ -16,7 +16,7 @@ from boomearth.video.artifacts import (
     capture_regular_file,
     load_json_snapshot,
 )
-from boomearth.video.illustration_themes import IllustrationThemeError, get_theme
+from boomearth.video.illustration_themes import COMPONENT_DRAW_THEMES, IllustrationThemeError, get_theme
 from boomearth.workbench.source_artifacts import (
     SourceContractError,
     publish_json_exclusive,
@@ -304,7 +304,7 @@ def is_native_sponge_prompt(theme_id: str, payload: bytes) -> bool:
     normalized = payload.replace(b"\r\n", b"\n")
     header, separator, _body = normalized[4:].partition(b"\n---\n")
     return (
-        theme_id == "sponge-host-handdrawn-v1"
+        theme_id in COMPONENT_DRAW_THEMES
         and normalized.startswith(b"---\n") and bool(separator)
         and b"target_size: native-source" in header.split(b"\n")
     )

@@ -40,6 +40,7 @@ _MOTION_PROFILES = {
 }
 _PROFILED_VISUAL_EFFECT = {
     "sponge-host-handdrawn-v1": "scale-settle",
+    "vivid-comic-component-brush-v1": "scale-settle",
     "vivid-comic-explainer": "scale-settle",
     "engineering-sketch-explainer": "line-reveal",
     "four-panel-comic-explainer": "wipe-right",

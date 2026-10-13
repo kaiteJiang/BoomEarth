@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -83,6 +84,26 @@ def _prepare(project: Path):
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_comic_without_drawing_plan_fails_before_publishing_legacy_renderer(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import boomearth.video.render_project as render_project
+
+    snapshot = render_project.load_content_plan_snapshot(project_root=project)
+    comic_plan = replace(
+        snapshot.plan,
+        visual_system="profiled-illustration-v4",
+        visual_theme="vivid-comic-component-brush-v1",
+    )
+    monkeypatch.setattr(
+        render_project, "load_content_plan_snapshot",
+        lambda **_kwargs: replace(snapshot, plan=comic_plan),
+    )
+    with pytest.raises(ContentRenderProjectError, match="comic drawing plan is required"):
+        _prepare(project)
+    assert not (project / "工程" / "render-project").exists()
 
 
 def test_xiaohei_embedded_text_does_not_render_system_labels(project: Path) -> None:
@@ -188,7 +209,8 @@ def test_xiaohuang_native_text_does_not_render_system_labels(project: Path, them
     assert "有温度" not in markup
 
 
-def test_native_sponge_draws_original_image_with_caption_timed_pencil() -> None:
+@pytest.mark.parametrize("theme_id", ["sponge-host-handdrawn-v1", "vivid-comic-component-brush-v1"])
+def test_native_component_theme_draws_original_image_with_caption_timed_pencil(theme_id: str) -> None:
     scene = SimpleNamespace(
         id="scene-01", chapter="先看任务", progress="1/1",
         title_lines=("先看任务",), subtitle_lines=(), notes=(), kicker="判断",
@@ -197,7 +219,7 @@ def test_native_sponge_draws_original_image_with_caption_timed_pencil() -> None:
     )
     plan = SimpleNamespace(
         scenes=(scene,), visual_system="profiled-illustration-v4",
-        visual_theme="sponge-host-handdrawn-v1",
+        visual_theme=theme_id,
     )
     timeline = SimpleNamespace(
         scenes=(SimpleNamespace(id="scene-01", start=0.0, end=10.0),)
@@ -211,12 +233,21 @@ def test_native_sponge_draws_original_image_with_caption_timed_pencil() -> None:
         sponge_native_scenes=frozenset({"scene-01"}),
     )
 
-    assert 'src="assets/profiled-illustrations/sponge-host-handdrawn-v1/scene-01.png"' in markup
+    assert f'src="assets/profiled-illustrations/{theme_id}/scene-01.png"' in markup
     assert 'id="scene-01--draw-canvas"' in markup
     assert 'src="assets/hand-pencil-cursor.png"' in markup
-    assert "source.naturalWidth" in script
-    assert "own=cues.filter" in script
-    assert "onUpdate:paint" in script
+    assert 'id="scene-01--info-card-1"' in markup
+    assert 'id="scene-01--info-card-2"' in markup
+    assert 'data-keyword="看任务"' in markup
+    assert "installSpongeRegionDraw" in script
+    assert "installSpongeInfoCards" in script
+    assert "scene-01" in script
+    template = (Path(__file__).parents[1] / "video-content-template/index.template.html").read_text(encoding="utf-8")
+    assert ".scene.sponge-native-source > .title { display: block" in template
+    assert ".scene.sponge-native-source > .note-card { display: block" in template
+    assert ".scene.sponge-native-source .visual-frame { left: 777px" in template
+    assert ".scene.sponge-native-source > .sponge-info-stack { position: absolute" in template
+    assert ".scene.sponge-native-source > .title, .scene.sponge-native-source > .note-card { display: none" not in template
 
 
 def _set_handoff_visual(root: Path, target: str) -> None:
@@ -871,6 +902,24 @@ def test_profiled_scene_markup_binds_selected_theme(theme_id: str) -> None:
     assert (
         f'src="assets/profiled-illustrations/{theme_id}/scene-01.png"' in markup
     )
+
+
+def test_sponge_scene_markup_binds_complete_host_regions() -> None:
+    scene = SimpleNamespace(
+        id="scene-01", layout_variant="standard", title_lines=("两个人物",),
+        subtitle_lines=(), notes=(), chapter="比较", progress="01", kicker="任务",
+        visual_asset="工程/assets/profiled-illustrations/sponge-host-handdrawn-v1/scene-01.png",
+        visual_mode="human-action", overlay_labels=(),
+    )
+    markup = _scene_html(
+        SimpleNamespace(scenes=(scene,), visual_system="profiled-illustration-v4",
+                        visual_theme="sponge-host-handdrawn-v1"),
+        SimpleNamespace(scenes=(SimpleNamespace(id="scene-01", start=0.0, end=8.0),)),
+        {"scene-01": "scene-01.png"},
+        native_sponge_scenes=frozenset({"scene-01"}),
+        sponge_host_regions={"scene-01": [[.4, .2, .7, .8], [.7, .2, 1.0, .8]]},
+    )
+    assert 'data-host-regions="[[0.4,0.2,0.7,0.8],[0.7,0.2,1.0,0.8]]"' in markup
 
 
 def test_profiled_timeline_consumes_theme_visual_effect() -> None:

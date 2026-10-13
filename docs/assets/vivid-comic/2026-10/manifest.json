@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "demo": {
+    "path": "drawing-demo-18s.mp4",
+    "sha256": "68413893672cf8b0462dc3b6288c0a8928d9eb35ffbd00a25420cd2b56fa1d50",
+    "duration_seconds": 18,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "audio": false
+  },
+  "captures": [
+    {
+      "path": "workspace-scene.webp",
+      "source_frame": 232,
+      "source_time_seconds": 7.733333333333333
+    },
+    {
+      "path": "reading-scene.webp",
+      "source_frame": 539,
+      "source_time_seconds": 17.966666666666665
+    }
+  ],
+  "checks": {
+    "semantic_parts": 24,
+    "progress_samples": 216,
+    "unassigned_visible_pixels": 0,
+    "future_part_leaks": 0,
+    "changed_completed_pixels": 0,
+    "end_frame_fill_pixels": 0,
+    "deterministic_rewind": true,
+    "decoded_frames": 540,
+    "actual_mp4_frames_visually_sampled": 69
+  },
+  "scope": "Two-scene drawing demonstration; these checks do not represent narration or subtitle validation.",
+  "assets": [
+    {
+      "path": "drawing-demo-18s.mp4",
+      "sha256": "68413893672cf8b0462dc3b6288c0a8928d9eb35ffbd00a25420cd2b56fa1d50",
+      "bytes": 2786064
+    },
+    {
+      "path": "drawing-preview.gif",
+      "sha256": "fc801222dbb20f76b95d9bdf262ded0f99cbd268aa14f8bc1d477a5f43dd006b",
+      "bytes": 2221312
+    },
+    {
+      "path": "reading-scene.webp",
+      "sha256": "1acfe245c533987ec4bb367325ded35fd6533a528b8cee255773e2713daaaa1e",
+      "bytes": 147850
+    },
+    {
+      "path": "workspace-scene.webp",
+      "sha256": "37f9ff9353a440ee9fc7f1e6cd7b7b74e3eff848dcd131fe98c1812fc31eabb9",
+      "bytes": 130694
+    }
+  ]
+}

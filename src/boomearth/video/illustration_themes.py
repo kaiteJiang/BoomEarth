@@ -10,6 +10,9 @@ from typing import Final, Mapping
 PROFILED_VISUAL_SYSTEM: Final[str] = "profiled-illustration-v4"
 DEFAULT_VISUAL_TARGET: Final[str] = "sponge-host-handdrawn-v1"
 TYPE_LED_TARGET: Final[str] = "semantic-handdrawn-v3/type-led"
+COMPONENT_DRAW_THEMES: Final[frozenset[str]] = frozenset({
+    "sponge-host-handdrawn-v1", "vivid-comic-component-brush-v1",
+})
 
 
 class IllustrationThemeError(ValueError):
@@ -144,6 +147,18 @@ _THEME_VALUES = (
                 "not_system_label_overlay",
             }
         ),
+    ),
+    IllustrationTheme(
+        id="vivid-comic-component-brush-v1",
+        chinese_name="鲜彩漫画逐项绘制",
+        invocation="鲜彩漫画人物替换海绵，保留已验收的逐项绘制、左文右图和字幕卡片动效。",
+        directory="vivid-comic-component-brush-v1",
+        prompt_style="clean-black-comic-linework-with-controlled-vivid-accents",
+        required_qc=frozenset({
+            "character_consistent", "expression_supports_claim", "action_explains_claim",
+            "accent_palette_controlled", "not_decorative_cartoon",
+            "native_labels_correct", "white_canvas", "not_system_label_overlay",
+        }),
     ),
 )
 
