@@ -13,6 +13,8 @@ description: Use when a BoomEarth approved script or handoff must become a rende
 
 先检查 production note 的接手状态、实际文件与哈希。正式归档有效则复验报告；最终 WAV/manifest/字幕六件套QC匹配则复用，不重复 TTS/ASR。每阶段更新 note 的最后有效gate、产物、下一步及失败。
 
+音频分段与批准段落不一一对应、文字卡时序或归档恢复时，按 [制作可靠性检查](../../../docs/VIDEO-PRODUCTION-RELIABILITY.md) 处理；复用已验收资产，保留失败证据。
+
 ## 当前新项目默认
 
 - sponge-host-handdrawn-v1：schema 4 / profiled-illustration-v4 / ra-video-illustrations；角色真源见 video-daheihuang/sponge-ip/DESIGN.md。仅换角色，继承 katerj-xiaohei-illustrations 原生字、白底融合与语义动作。
@@ -25,7 +27,7 @@ description: Use when a BoomEarth approved script or handoff must become a rende
 ## 制作
 
 1. 写 production note、内容/场景/素材/运动计划与字幕安全区，记录时长和批准稿哈希。
-2. `jl-oral-linebreaks` 和项目内 `katerj-oral-linebreaks` 对批准稿只调整边界。旁白合同 dry-run 通过后启动一次 `katerj-local-tts`；同时让 `ra-video-illustrations` 准备海绵 prompt→生成→complete证据→真实语义QC→manifest。图片与配音并行，不得用原图文件存在替代完整证据，也不把样片回执迁入正式项目。TTS 每 30 分钟只检查一次，健康运行时继续其他工作，不循环轮询。
+2. `jl-oral-linebreaks` 和项目内 `katerj-oral-linebreaks` 对批准稿只调整边界。旁白合同 dry-run 通过后启动一次 `katerj-local-tts`；同时让 `ra-video-illustrations` 准备海绵 prompt→生成→complete证据→真实语义QC→manifest。图片与配音并行，不得用原图文件存在替代完整证据，也不把样片回执迁入正式项目。默认手动检查配音；用户明确要求定时跟进时才按约定节拍检查，取消后不重建。健康运行时继续其他工作，不循环轮询。
 3. 最终无损 WAV、manifest、脚本和 provenance 验证通过后，`katerj-audio-subtitles` 调用精确 WAV 获取词时间；按 `jl-oral-linebreaks` 用真实词边界分句，句中逗号转空格、行尾只保留问号，六件套/QC全过后交 `katerj-caption-rendering`。
 4. katerj-motion-director 根据最终音频定场景与组件cue；组件显现、擦除、淡入和轻微停稳，稳定底板，避免机械重复动作。
 5. 可选人物仅用同一最终旁白；默认跳过。通过 canonical run_content_production.py finalize 合成，不用历史样片builder当正式编译器。

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -154,6 +156,14 @@ class ContentScene:
 
 
 @dataclass(frozen=True, slots=True)
+class AudioSegmentMapBinding:
+    path: str
+    sha256: str
+    narration_contract_sha256: str
+    handoff_segments_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class ContentPlan:
     schema_version: int
     project_id: str
@@ -164,6 +174,7 @@ class ContentPlan:
     scenes: tuple[ContentScene, ...]
     illustration_skill: str | None = None
     visual_theme: str | None = None
+    audio_segment_map: AudioSegmentMapBinding | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,6 +201,8 @@ class ContentPlanSnapshot:
     handoff_snapshot: FileSnapshot
     manifest_snapshot: FileSnapshot
     narration_contract_snapshot: FileSnapshot
+    narration_segment_texts: tuple[str, ...] = ()
+    audio_segment_map_snapshot: FileSnapshot | None = None
 
 
 def _normalize_segment_text(text: str) -> str:
@@ -646,6 +659,7 @@ def validate_content_plan(
     handoff_visual: HandoffVisualContract,
     narration_segments: tuple[str, ...],
     require_xiaohei_text_layer: bool = False,
+    audio_segment_map: AudioSegmentMapBinding | None = None,
 ) -> ContentPlan:
     """Validate an exact P1 plan against its public text and local asset contract."""
 
@@ -664,6 +678,10 @@ def validate_content_plan(
         if is_v2
         else _TOP_LEVEL_FIELDS
     )
+    if audio_segment_map is not None:
+        expected_top = expected_top | {"audio_segment_map"}
+        if candidate.get("audio_segment_map") != asdict(audio_segment_map):
+            raise ContentPlanError("audio segment map binding is invalid")
     if set(candidate) != expected_top:
         raise ContentPlanError("content plan schema is invalid")
     if (
@@ -947,6 +965,7 @@ def validate_content_plan(
             "ra-video-illustrations" if is_v2 or is_v3 or is_v4 else None
         ),
         visual_theme=theme.id if theme is not None else None,
+        audio_segment_map=audio_segment_map,
     )
     if validate_public_handoff(encode_canonical_json(_plan_dict(plan)).decode("utf-8")):
         raise ContentPlanError("public content is invalid")
@@ -1008,6 +1027,8 @@ def _plan_dict(plan: ContentPlan) -> dict[str, object]:
         result["illustration_skill"] = plan.illustration_skill
     if plan.visual_theme is not None:
         result["visual_theme"] = plan.visual_theme
+    if plan.audio_segment_map is not None:
+        result["audio_segment_map"] = asdict(plan.audio_segment_map)
     return result
 
 
@@ -1098,6 +1119,81 @@ def _manifest_contract(
     return narration_segments, manifest_snapshot, contract_snapshot
 
 
+_AUDIO_SEGMENT_MAP_PATH = "工程/audio-segment-map.json"
+
+
+def _map_presence_matches(root: Path, snapshot: FileSnapshot | None) -> bool:
+    # A newly appearing map must not silently change a legacy plan's meaning.
+    return snapshot is not None or not os.path.lexists(root / _AUDIO_SEGMENT_MAP_PATH)
+
+
+def _mapped_narration_contract(
+    *,
+    project_root: Path,
+    handoff_segments: tuple[HandoffSegment, ...],
+    narration_segments: tuple[str, ...],
+    narration_snapshot: FileSnapshot,
+    expected_binding: object = None,
+    require_bound: bool = False,
+) -> tuple[tuple[str, ...], FileSnapshot | None, AudioSegmentMapBinding | None]:
+    """Bind ordered TTS splits to the unchanged, semantic handoff segments."""
+
+    map_path = project_root / _AUDIO_SEGMENT_MAP_PATH
+    if not os.path.lexists(map_path):
+        if expected_binding is not None:
+            raise ContentPlanError("audio segment map is unavailable")
+        return narration_segments, None, None
+    try:
+        value, map_snapshot = load_json_snapshot(map_path, within=project_root)
+    except ArtifactError:
+        raise ContentPlanError("audio segment map is invalid") from None
+    if not isinstance(value, list) or len(value) != len(narration_segments):
+        raise ContentPlanError("audio segment map is invalid")
+    expected_ids = tuple(f"segment-{index:03d}" for index in range(1, len(handoff_segments) + 1))
+    if not expected_ids or tuple(segment.id for segment in handoff_segments) != expected_ids:
+        raise ContentPlanError("audio segment map is invalid")
+    grouped: list[list[str]] = [[] for _ in handoff_segments]
+    current_group = 0
+    for index, (row, text) in enumerate(zip(value, narration_segments), 1):
+        if (
+            not isinstance(row, dict)
+            or set(row) != {"audio_segment", "handoff_segment"}
+            or type(row["audio_segment"]) is not int
+            or row["audio_segment"] != index
+            or not isinstance(row["handoff_segment"], str)
+        ):
+            raise ContentPlanError("audio segment map is invalid")
+        segment_id = row["handoff_segment"]
+        if segment_id != expected_ids[current_group]:
+            current_group += 1
+            if (
+                current_group >= len(expected_ids)
+                or segment_id != expected_ids[current_group]
+                or not grouped[current_group - 1]
+            ):
+                raise ContentPlanError("audio segment map is invalid")
+        grouped[current_group].append(text)
+    if any(not texts for texts in grouped):
+        raise ContentPlanError("audio segment map is invalid")
+    semantic_texts = tuple("\n".join(texts) for texts in grouped)
+    if tuple(_speech_equivalence_text(text) for text in semantic_texts) != tuple(
+        _speech_equivalence_text(segment.text) for segment in handoff_segments
+    ):
+        raise ContentPlanError("audio segment map text is invalid")
+    handoff_payload = encode_canonical_json(
+        [{"id": segment.id, "text": segment.text} for segment in handoff_segments]
+    )
+    binding = AudioSegmentMapBinding(
+        path=_AUDIO_SEGMENT_MAP_PATH,
+        sha256=map_snapshot.sha256,
+        narration_contract_sha256=narration_snapshot.sha256,
+        handoff_segments_sha256=hashlib.sha256(handoff_payload).hexdigest(),
+    )
+    if (require_bound or expected_binding is not None) and expected_binding != asdict(binding):
+        raise ContentPlanError("audio segment map binding is invalid")
+    return semantic_texts, map_snapshot, binding
+
+
 def compile_content_plan(
     *, project_root: Path, candidate_path: Path
 ) -> ContentPlanSnapshot:
@@ -1114,6 +1210,21 @@ def compile_content_plan(
     handoff_segments = parse_handoff_segments(handoff_value)
     handoff_visual = parse_handoff_visual_contract(handoff_value)
     narration_segments, manifest_snapshot, narration_snapshot = _manifest_contract(root)
+    narration_segments, map_snapshot, map_binding = _mapped_narration_contract(
+        project_root=root,
+        handoff_segments=handoff_segments,
+        narration_segments=narration_segments,
+        narration_snapshot=narration_snapshot,
+    )
+    if map_binding is not None:
+        if not isinstance(candidate_value, dict):
+            raise ContentPlanError("content plan schema is invalid")
+        if (
+            "audio_segment_map" in candidate_value
+            and candidate_value["audio_segment_map"] != asdict(map_binding)
+        ):
+            raise ContentPlanError("audio segment map binding is invalid")
+        candidate_value = {**candidate_value, "audio_segment_map": asdict(map_binding)}
     plan = validate_content_plan(
         candidate_value,
         project_root=root,
@@ -1122,14 +1233,16 @@ def compile_content_plan(
         handoff_visual=handoff_visual,
         narration_segments=narration_segments,
         require_xiaohei_text_layer=True,
+        audio_segment_map=map_binding,
     )
     snapshots = (
         candidate_snapshot,
         handoff_snapshot,
         manifest_snapshot,
         narration_snapshot,
+        *((map_snapshot,) if map_snapshot is not None else ()),
     )
-    if not all(snapshot_matches(snapshot) for snapshot in snapshots):
+    if not all(snapshot_matches(snapshot) for snapshot in snapshots) or not _map_presence_matches(root, map_snapshot):
         raise ContentPlanError("content plan input changed")
     formal = root / "工程" / "content-plan.json"
     try:
@@ -1138,7 +1251,7 @@ def compile_content_plan(
         )
     except ArtifactError:
         raise ContentPlanError("content plan publication failed") from None
-    if not all(snapshot_matches(snapshot) for snapshot in snapshots):
+    if not all(snapshot_matches(snapshot) for snapshot in snapshots) or not _map_presence_matches(root, map_snapshot):
         try:
             if snapshot_matches(published):
                 published.path.unlink()
@@ -1153,6 +1266,8 @@ def compile_content_plan(
         handoff_snapshot=handoff_snapshot,
         manifest_snapshot=manifest_snapshot,
         narration_contract_snapshot=narration_snapshot,
+        narration_segment_texts=narration_segments,
+        audio_segment_map_snapshot=map_snapshot,
     )
 
 
@@ -1184,6 +1299,14 @@ def load_content_plan_snapshot(
             else None
         ),
     )
+    narration_segments, map_snapshot, map_binding = _mapped_narration_contract(
+        project_root=root,
+        handoff_segments=handoff_segments,
+        narration_segments=narration_segments,
+        narration_snapshot=narration_snapshot,
+        expected_binding=value.get("audio_segment_map") if isinstance(value, dict) else None,
+        require_bound=True,
+    )
     plan = validate_content_plan(
         value,
         project_root=root,
@@ -1191,14 +1314,16 @@ def load_content_plan_snapshot(
         handoff_segments=handoff_segments,
         handoff_visual=handoff_visual,
         narration_segments=narration_segments,
+        audio_segment_map=map_binding,
     )
     snapshots = (
         formal_snapshot,
         handoff_snapshot,
         manifest_snapshot,
         narration_snapshot,
+        *((map_snapshot,) if map_snapshot is not None else ()),
     )
-    if not all(snapshot_matches(snapshot) for snapshot in snapshots):
+    if not all(snapshot_matches(snapshot) for snapshot in snapshots) or not _map_presence_matches(root, map_snapshot):
         raise ContentPlanError("content plan input changed")
     return ContentPlanSnapshot(
         path=formal,
@@ -1208,4 +1333,6 @@ def load_content_plan_snapshot(
         handoff_snapshot=handoff_snapshot,
         manifest_snapshot=manifest_snapshot,
         narration_contract_snapshot=narration_snapshot,
+        narration_segment_texts=narration_segments,
+        audio_segment_map_snapshot=map_snapshot,
     )

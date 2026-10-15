@@ -912,6 +912,133 @@ def test_manifest_must_bind_the_exact_display_jsonl(
         compile_fixture(project, valid_candidate(project))
 
 
+def _write_split_audio_contract(project: Path) -> Path:
+    media = project / "工程" / "media"
+    texts = ("第一段", "公开口播。", _segments()[1], "第三段", "公开口播。", _segments()[3])
+    payload = "".join(json.dumps({"text": text}, ensure_ascii=False) + "\n" for text in texts).encode("utf-8")
+    (media / "segments.jsonl").write_bytes(payload)
+    manifest_path = media / "voice_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(segment_count=len(texts), segment_contract_sha256=hashlib.sha256(payload).hexdigest())
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    mapping = [
+        {"audio_segment": index, "handoff_segment": f"segment-{group:03d}"}
+        for index, group in enumerate((1, 1, 2, 3, 3, 4), 1)
+    ]
+    path = project / "工程" / "audio-segment-map.json"
+    path.write_text(json.dumps(mapping), encoding="utf-8")
+    return path
+
+
+def test_split_audio_mapping_is_hash_bound_without_changing_sources(project: Path) -> None:
+    map_path = _write_split_audio_contract(project)
+    source_paths = [map_path, project / "工程/media/segments.jsonl", project / "工程/media/voice_manifest.json"]
+    originals = {path: path.read_bytes() for path in source_paths}
+    result = compile_fixture(project, valid_candidate(project))
+    formal = json.loads(result.path.read_text(encoding="utf-8"))
+    binding = formal["audio_segment_map"]
+    assert binding["path"] == "工程/audio-segment-map.json"
+    assert binding["sha256"] == hashlib.sha256(map_path.read_bytes()).hexdigest()
+    assert binding["narration_contract_sha256"] == result.narration_contract_snapshot.sha256
+    assert result.audio_segment_map_snapshot is not None
+    assert result.audio_segment_map_snapshot.sha256 == binding["sha256"]
+    assert result.narration_segment_texts == ("第一段\n公开口播。", _segments()[1], "第三段\n公开口播。", _segments()[3])
+    reloaded = load_content_plan_snapshot(project_root=project)
+    assert reloaded.plan == result.plan
+    assert reloaded.narration_segment_texts == result.narration_segment_texts
+    assert {path: path.read_bytes() for path in source_paths} == originals
+
+
+@pytest.mark.parametrize("fault", ["missing", "duplicate", "order", "boolean", "unknown", "skip", "revisit", "extra", "wrong_boundary"])
+def test_invalid_split_audio_mapping_fails_closed(project: Path, fault: str) -> None:
+    path = _write_split_audio_contract(project)
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if fault == "missing":
+        rows.pop()
+    elif fault == "duplicate":
+        rows[1]["audio_segment"] = 1
+    elif fault == "order":
+        rows[0], rows[1] = rows[1], rows[0]
+    elif fault == "boolean":
+        rows[0]["audio_segment"] = True
+    elif fault == "unknown":
+        rows[0]["handoff_segment"] = "segment-999"
+    elif fault == "skip":
+        rows[2]["handoff_segment"] = "segment-003"
+    elif fault == "revisit":
+        rows[4]["handoff_segment"] = "segment-002"
+    elif fault == "extra":
+        rows[0]["text"] = "unbound"
+    else:
+        rows[1]["handoff_segment"] = "segment-002"
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    with pytest.raises(ContentPlanError, match="audio segment map"):
+        compile_fixture(project, valid_candidate(project))
+    assert not (project / "工程/content-plan.json").exists()
+
+
+def test_split_audio_without_explicit_mapping_still_fails(project: Path) -> None:
+    path = _write_split_audio_contract(project)
+    path.rename(path.with_suffix(".withheld.json"))
+    with pytest.raises(ContentPlanError, match="narration contract is invalid"):
+        compile_fixture(project, valid_candidate(project))
+
+
+@pytest.mark.parametrize("fault", ["map_missing", "map_bytes", "binding_missing", "map_hash", "contract_hash", "handoff_hash", "path"])
+def test_formal_split_audio_binding_cannot_be_removed_or_tampered(project: Path, fault: str) -> None:
+    path = _write_split_audio_contract(project)
+    result = compile_fixture(project, valid_candidate(project))
+    formal = json.loads(result.path.read_text(encoding="utf-8"))
+    if fault == "map_missing":
+        path.rename(path.with_suffix(".withheld.json"))
+    elif fault == "map_bytes":
+        path.write_bytes(path.read_bytes() + b"\n")
+    elif fault == "binding_missing":
+        formal.pop("audio_segment_map")
+        result.path.write_text(json.dumps(formal), encoding="utf-8")
+    else:
+        field = {"map_hash": "sha256", "contract_hash": "narration_contract_sha256", "handoff_hash": "handoff_segments_sha256", "path": "path"}[fault]
+        formal["audio_segment_map"][field] = "../other.json" if field == "path" else "0" * 64
+        result.path.write_text(json.dumps(formal), encoding="utf-8")
+    with pytest.raises(ContentPlanError, match="audio segment map"):
+        load_content_plan_snapshot(project_root=project)
+
+
+def test_map_binding_survives_handoff_status_change_and_archive_move(tmp_path: Path) -> None:
+    active = tmp_path / "视频工作台/制作中/2026-08-13-content-plan"
+    _populate_project(active)
+    _write_split_audio_contract(active)
+    result = compile_fixture(active, valid_candidate(active))
+    handoff_path = active / "交接稿.md"
+    handoff_path.write_text(handoff_path.read_text(encoding="utf-8").replace("status: 制作中", "status: 已制作"), encoding="utf-8")
+    archive = tmp_path / "视频工作台/已制作/8月中旬" / active.name
+    archive.parent.mkdir(parents=True)
+    active.rename(archive)
+    reloaded = load_content_plan_snapshot(project_root=archive, prearchive_project_root=active)
+    assert reloaded.plan.audio_segment_map == result.plan.audio_segment_map
+    assert reloaded.audio_segment_map_snapshot.path == archive / "工程/audio-segment-map.json"
+
+
+def test_map_change_during_compile_prevents_publication(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import boomearth.video.content_plan as content_plan
+
+    map_path = _write_split_audio_contract(project)
+    real_matches = content_plan.snapshot_matches
+    changed = False
+
+    def change_map(snapshot) -> bool:
+        nonlocal changed
+        if snapshot.path == map_path.absolute() and not changed:
+            changed = True
+            map_path.write_bytes(map_path.read_bytes() + b"\n")
+        return real_matches(snapshot)
+
+    monkeypatch.setattr(content_plan, "snapshot_matches", change_map)
+    with pytest.raises(ContentPlanError, match="content plan input changed"):
+        compile_fixture(project, valid_candidate(project))
+    assert not (project / "工程/content-plan.json").exists()
+
+
 def test_handoff_must_equal_jsonl_display_text_not_tts_substitution(project: Path) -> None:
     batch = project / "工程" / "media" / "segments.jsonl"
     rows = [json.loads(line) for line in batch.read_text(encoding="utf-8").splitlines()]

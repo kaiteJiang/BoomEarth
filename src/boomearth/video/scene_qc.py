@@ -218,7 +218,7 @@ def publish_motion_preview_qc(
         canvas.save(temporary_sheet, format="JPEG", quality=90, optimize=False)
         generated_sheet = capture_regular_file(temporary_sheet, within=root)
         publish_bytes_no_clobber(sheet, generated_sheet.payload, within=root)
-        temporary_sheet.unlink(missing_ok=True)
+        # Keep the generated source sheet as production evidence.
         sheet_published = True
         payload = {
             "schema_version": 1,
@@ -243,13 +243,8 @@ def publish_motion_preview_qc(
     except (ArtifactError, OSError, ValueError):
         raise SceneQCError("motion QC publication failed") from None
     finally:
-        if stage.exists():
-            shutil.rmtree(stage, ignore_errors=True)
-        temporary_sheet.unlink(missing_ok=True)
-        if published and not qc_path.exists():
-            shutil.rmtree(previews, ignore_errors=True)
-        if sheet_published and not qc_path.exists():
-            sheet.unlink(missing_ok=True)
+        # Failed and successful QC artifacts must both remain recoverable.
+        pass
 
 
 def _after_frames_extracted(_evidence: tuple[SceneQCEvidence, ...]) -> None:
@@ -542,6 +537,7 @@ def render_scene_qc(
             plan_snapshot.handoff_snapshot,
             plan_snapshot.manifest_snapshot,
             plan_snapshot.narration_contract_snapshot,
+            *((plan_snapshot.audio_segment_map_snapshot,) if plan_snapshot.audio_segment_map_snapshot is not None else ()),
             timeline_snapshot,
             final_snapshot,
             captions_snapshot,
@@ -566,10 +562,8 @@ def render_scene_qc(
     except (ArtifactError, OSError, subprocess.SubprocessError):
         raise SceneQCError("scene QC publication failed") from None
     finally:
-        if stage.exists() and stage.parent == qc:
-            shutil.rmtree(stage, ignore_errors=True)
-        if published_previews and not qc_path.exists() and previews.exists():
-            shutil.rmtree(previews, ignore_errors=True)
+        # Preserve incomplete extraction stages for diagnosis and recovery.
+        pass
     return SceneQCResult(
         qc_path=qc_path,
         previews_dir=previews,
@@ -637,11 +631,8 @@ def create_scene_contact_sheet(
     except (ArtifactError, OSError, subprocess.SubprocessError):
         raise SceneQCError("scene contact sheet failed") from None
     finally:
-        if temporary.exists():
-            try:
-                temporary.unlink()
-            except OSError:
-                pass
+        # Retain the original generated contact sheet even after publication.
+        pass
     return times
 
 

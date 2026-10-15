@@ -5,8 +5,9 @@ from types import SimpleNamespace
 import pytest
 
 from boomearth.video.sponge_components import (
-    SpongeComponentError, resolve_cue_start, validate_drawing_plan,
+    SpongeComponentError, SpongeCueReviewRequired, resolve_cue_start, validate_drawing_plan,
 )
+from boomearth.providers.volcengine_asr import ASRWord
 
 
 def fixture_plan(tmp_path):
@@ -39,8 +40,85 @@ def test_invalid_region_contract_cannot_reach_renderer(tmp_path,change):
 
 
 def test_complete_speech_phrase_can_cross_caption_boundary():
-    captions=[dict(text='看到一个新工具',start=1.03,end=2.5),dict(text='先注册；看到一份提示词',start=2.6,end=4.9),dict(text='先收藏',start=5.04,end=5.9)]
-    assert resolve_cue_start('提示词，先收藏',captions)==2.6
-    assert resolve_cue_start('先收藏',captions)==5.04
-    with pytest.raises(SpongeComponentError): resolve_cue_start('先收藏视频',captions)
-    with pytest.raises(SpongeComponentError): resolve_cue_start('新工具',captions,after=3)
+    captions=[dict(text='看到一份提示词',start=2.6,end=4.9),dict(text='先收藏',start=5.04,end=5.9)]
+    words=tuple(ASRWord(*row) for row in [('看到',2.6,3.1),('一份',3.1,3.9),('提示词',3.9,4.9),('先',5.04,5.3),('收藏',5.3,5.9)])
+    assert resolve_cue_start('提示词，先收藏',captions,words=words)==3.9
+    assert resolve_cue_start('先收藏',captions,words=words)==5.04
+    with pytest.raises(SpongeComponentError): resolve_cue_start('先收藏视频',captions,words=words)
+    with pytest.raises(SpongeComponentError): resolve_cue_start('提示词',captions,after=4,words=words)
+
+
+def two_action_words():
+    text='先整理文件再保存清单'
+    words=tuple(ASRWord(character, 1 + index / 4, 1 + (index + 1) / 4)
+                for index,character in enumerate(text))
+    return dict(text=text,start=1,end=3.5),words
+
+
+def test_two_complete_phrases_in_one_caption_have_independent_real_word_onsets():
+    caption,words=two_action_words()
+    first=resolve_cue_start('整理文件',[caption],words=words)
+    second=resolve_cue_start('保存清单',[caption],after=first,words=words)
+    assert first==1.25
+    assert second==2.5
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('保存清单',[caption],after=second,words=words)
+
+
+def test_repeated_phrase_selects_only_a_strictly_later_real_occurrence():
+    captions=[dict(text='先检查再检查',start=1,end=3)]
+    words=tuple(ASRWord(*row) for row in [('先',1,1.2),('检查',1.2,1.8),('再',1.8,2),('检查',2,3)])
+    assert resolve_cue_start('检查',captions,words=words)==1.2
+    assert resolve_cue_start('检查',captions,after=1.2,words=words)==2
+
+
+def test_reviewed_display_spelling_preserves_actual_asr_token_time():
+    captions=[dict(text='AlphaTool 用来整理清单',start=1,end=4)]
+    words=tuple(ASRWord(*row) for row in [('AlfaTool',1,2),('用来',2,2.5),('整理',2.5,3),('清单',3,4)])
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('AlphaTool 用来整理',captions,words=words)
+    with pytest.raises(SpongeCueReviewRequired):
+        resolve_cue_start(captions[0]['text'],captions,words=words)
+    reviewed=frozenset({('AlphaTool 用来整理清单','alfatool用来整理清单',1,4)})
+    assert resolve_cue_start(captions[0]['text'],captions,words=words,reviewed_captions=reviewed)==1
+    assert resolve_cue_start('清单',captions,words=words)==3
+    assert captions[0]['text']=='AlphaTool 用来整理清单'
+
+
+@pytest.mark.parametrize('words',[
+    (),
+    (ASRWord('公开内容',1,2),),
+    (ASRWord('选择公开内容',.9,2),),
+    (ASRWord('选择公开内容',1,2.1),),
+    (ASRWord('选择',1,1.5),ASRWord('公开内容',1.4,2)),
+])
+def test_missing_onset_or_invalid_word_intervals_never_fall_back_to_caption_start(words):
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('选择公开内容',[dict(text='选择公开内容',start=1,end=2)],words=words)
+
+
+def test_two_cues_inside_one_asr_token_cannot_invent_subtoken_times():
+    captions=[dict(text='选择公开内容',start=1,end=2)]
+    words=(ASRWord('选择公开内容',1,2),)
+    first=resolve_cue_start('选择公开',captions,words=words)
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('公开内容',captions,after=first,words=words)
+
+
+@pytest.mark.parametrize('prefix',['','很长相同前缀'*10])
+def test_reordered_actions_cannot_bind_to_the_later_wrong_occurrence(prefix):
+    words=tuple(ASRWord(*row) for row in [(prefix+'打开网站',1,2),('再',2,2.2),('打开页面',2.2,3)])
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('打开页面',[dict(text=prefix+'打开页面再打开网站',start=1,end=3)],words=words)
+
+
+def test_exact_first_word_cannot_authorize_a_missing_phrase_body():
+    words=(ASRWord('选择',1,2),ASRWord('完全不同',2,3))
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('选择公开内容',[dict(text='选择公开内容',start=1,end=3)],words=words)
+
+
+def test_unreviewed_alias_before_repeated_term_cannot_shift_to_later_term():
+    words=(ASRWord('诶比西',1,2),ASRWord('ABC',2,3))
+    with pytest.raises(SpongeComponentError):
+        resolve_cue_start('ABC',[dict(text='ABC，ABC',start=1,end=3)],words=words)

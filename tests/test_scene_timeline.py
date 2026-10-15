@@ -97,6 +97,7 @@ def _populate_project(
     *,
     words: list[dict[str, object]] | None = None,
     segments: tuple[str, ...] = SEGMENTS,
+    split_audio: bool = False,
 ) -> None:
     media = project / "工程" / "media"
     assets = project / "工程" / "assets" / "xiaohei-illustrations"
@@ -125,9 +126,13 @@ def _populate_project(
         encoding="utf-8",
     )
     batch = media / "segments.jsonl"
+    audio_texts = (
+        ("第一段介绍", "Claude Max。", segments[1], "第三段重新", "搭建流程。", segments[3])
+        if split_audio else segments
+    )
     batch_bytes = b"".join(
         (json.dumps({"text": text}, ensure_ascii=False) + "\n").encode("utf-8")
-        for text in segments
+        for text in audio_texts
     )
     batch.write_bytes(batch_bytes)
     narration = media / "narration.wav"
@@ -138,7 +143,7 @@ def _populate_project(
             {
                 "segment_contract_path": str(batch.absolute()),
                 "segment_contract_sha256": hashlib.sha256(batch_bytes).hexdigest(),
-                "segment_count": 4,
+                "segment_count": len(audio_texts),
                 "output_sha256": narration_hash,
             }
         ),
@@ -148,6 +153,14 @@ def _populate_project(
         (assets / f"scene-{index:02d}.png").write_bytes(PNG)
     candidate = project / "工程" / "content-plan.candidate.json"
     candidate.write_text(json.dumps(_candidate(project), ensure_ascii=False), encoding="utf-8")
+    if split_audio:
+        (project / "工程/audio-segment-map.json").write_text(
+            json.dumps([
+                {"audio_segment": index, "handoff_segment": f"segment-{group:03d}"}
+                for index, group in enumerate((1, 1, 2, 3, 3, 4), 1)
+            ]),
+            encoding="utf-8",
+        )
     compile_content_plan(project_root=project, candidate_path=candidate)
     word_values = words if words is not None else _words()
     (captions / "captions_words.json").write_text(
@@ -184,6 +197,42 @@ def test_inter_scene_silence_belongs_to_the_previous_scene(project: Path) -> Non
         (7.4, 11.0),
         (11.0, 16.0),
     )
+
+
+def test_tts_split_map_preserves_all_semantic_scene_asr_boundaries(tmp_path: Path) -> None:
+    project = tmp_path / "2026-08-13-split-audio"
+    _populate_project(project, split_audio=True)
+    result = build_scene_timeline(project_root=project)
+    assert tuple((scene.start, scene.end) for scene in result.timeline.scenes) == (
+        (0.0, 4.2), (4.2, 7.4), (7.4, 11.0), (11.0, 16.0),
+    )
+    assert tuple(scene.segment_ids for scene in result.timeline.scenes) == tuple(
+        (f"segment-{index:03d}",) for index in range(1, 5)
+    )
+    assert result.timeline.alignment_coverage == 1.0
+    assert validate_scene_timeline(json.loads(result.path.read_text(encoding="utf-8")), project_root=project) == result.timeline
+
+
+def test_map_change_during_timeline_prevents_publication(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import boomearth.video.scene_timeline as timeline_module
+
+    project = tmp_path / "2026-08-13-split-audio"
+    _populate_project(project, split_audio=True)
+    map_path = project / "工程/audio-segment-map.json"
+    real_matches = timeline_module.snapshot_matches
+    changed = False
+
+    def change_map(snapshot) -> bool:
+        nonlocal changed
+        if snapshot.path == map_path.absolute() and not changed:
+            changed = True
+            map_path.write_bytes(map_path.read_bytes() + b"\n")
+        return real_matches(snapshot)
+
+    monkeypatch.setattr(timeline_module, "snapshot_matches", change_map)
+    with pytest.raises(SceneTimelineError, match="timeline input changed"):
+        build_scene_timeline(project_root=project)
+    assert not (project / "工程/scene-timeline.json").exists()
 
 
 def test_timeline_binds_final_audio_words_and_content_plan_hashes(project: Path) -> None:

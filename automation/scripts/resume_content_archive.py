@@ -24,6 +24,7 @@ from run_v2_production_sample import (
     _publication_manifest_matches,
     _read_production_caption_metadata,
     _read_stable_file_bytes,
+    _retain_report,
     _safe_existing_directory,
     _safe_mkdir,
     _sanitize_incomplete_stage,
@@ -62,7 +63,8 @@ def resume_content_archive(*, workspace_root: Path, active_project: str) -> Path
         if caption_count <= 0 or not timeline.scenes:
             raise ResumeArchiveError("resume-content")
         duration_seconds = timeline.duration_seconds
-        completed_handoff = _handoff_renderer(handoff_snapshot)(
+        handoff_text_fn = _handoff_renderer(handoff_snapshot)
+        completed_handoff = handoff_text_fn(
             project,
             "已完成",
             duration_seconds,
@@ -86,7 +88,7 @@ def resume_content_archive(*, workspace_root: Path, active_project: str) -> Path
             project.delivery_report_path,
             receipt_bytes,
         )
-        report.unlink()
+        _retain_report(report)
         completion = dict(publication)
         report_relative = project.delivery_report_path.relative_to(
             project.active_dir
@@ -154,7 +156,7 @@ def resume_content_archive(*, workspace_root: Path, active_project: str) -> Path
                     project,
                     duration_seconds,
                     word_count,
-                    _handoff_renderer(handoff_snapshot),
+                    handoff_text_fn,
                 )
             except (OSError, RuntimeError):
                 pass

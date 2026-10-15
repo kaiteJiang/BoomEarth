@@ -33,8 +33,14 @@ def _checker():
 
 @pytest.fixture
 def content_project(tmp_path: Path) -> tuple[Path, Path, dict[str, object]]:
+    return _make_content_project(tmp_path)
+
+
+def _make_content_project(
+    tmp_path: Path, *, split_audio: bool = False
+) -> tuple[Path, Path, dict[str, object]]:
     project = tmp_path / "2026-08-13-content-delivery"
-    _populate_project(project)
+    _populate_project(project, split_audio=split_audio)
     for index in range(1, 5):
         asset = project / "工程" / "assets" / "xiaohei-illustrations" / f"scene-{index:02d}.png"
         asset.write_bytes(asset.read_bytes() + bytes([index]))
@@ -114,6 +120,57 @@ def test_complete_content_artifacts_are_returned_for_receipt(content_project) ->
     assert "质检/scene-preview-qc.json" in relative
     assert len([item for item in relative if item.startswith("质检/scene-previews/")]) == 12
     assert len([item for item in relative if item.startswith("工程/assets/")]) == 4
+
+
+def test_split_audio_map_is_included_in_delivery_receipt_snapshots(tmp_path: Path) -> None:
+    checker = _checker()
+    project, final, coverage = _make_content_project(tmp_path, split_audio=True)
+    map_path = project / "工程/audio-segment-map.json"
+    errors: list[str] = []
+    snapshots = {}
+
+    artifacts = checker._content_delivery_artifacts(
+        project, final, coverage, errors, validated_snapshots=snapshots
+    )
+
+    assert errors == []
+    assert artifacts.count(map_path) == 1
+    assert snapshots[map_path].sha256 == hashlib.sha256(map_path.read_bytes()).hexdigest()
+
+
+def test_split_audio_map_tampering_is_rejected_before_delivery(tmp_path: Path) -> None:
+    checker = _checker()
+    project, final, coverage = _make_content_project(tmp_path, split_audio=True)
+    map_path = project / "工程/audio-segment-map.json"
+    map_path.write_bytes(map_path.read_bytes() + b"\n")
+    errors: list[str] = []
+
+    artifacts = checker._content_delivery_artifacts(project, final, coverage, errors)
+
+    assert artifacts == ()
+    assert errors == ["rule=content-plan"]
+
+
+def test_split_audio_map_replacement_during_delivery_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checker = _checker()
+    project, final, coverage = _make_content_project(tmp_path, split_audio=True)
+    map_path = project / "工程/audio-segment-map.json"
+
+    def replace_map() -> None:
+        map_path.write_bytes(map_path.read_bytes() + b"\n")
+
+    monkeypatch.setattr(checker, "_after_content_evidence_validation", replace_map)
+    errors: list[str] = []
+    snapshots = {}
+
+    checker._content_delivery_artifacts(
+        project, final, coverage, errors, validated_snapshots=snapshots
+    )
+
+    assert "rule=content-plan" in errors
+    assert map_path not in snapshots
 
 
 def test_changed_preview_fails_hash_binding(content_project) -> None:

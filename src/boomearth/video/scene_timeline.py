@@ -221,6 +221,12 @@ def _validate_caption_qc(snapshot: FileSnapshot, *, narration_sha256: str) -> No
 
 
 def _segment_texts(plan_snapshot: ContentPlanSnapshot) -> tuple[str, ...]:
+    if plan_snapshot.audio_segment_map_snapshot is not None:
+        # The content-plan loader has verified every split, semantic ID and
+        # bound hash. Align those semantic groups to the final WAV's ASR words.
+        if not plan_snapshot.narration_segment_texts:
+            raise SceneTimelineError("narration contract is invalid")
+        return plan_snapshot.narration_segment_texts
     try:
         lines = plan_snapshot.narration_contract_snapshot.payload.decode("utf-8").splitlines()
         values = tuple(json.loads(line) for line in lines)
@@ -858,6 +864,7 @@ def validate_scene_timeline(
         plan_snapshot.handoff_snapshot,
         plan_snapshot.manifest_snapshot,
         plan_snapshot.narration_contract_snapshot,
+        *((plan_snapshot.audio_segment_map_snapshot,) if plan_snapshot.audio_segment_map_snapshot is not None else ()),
         narration_snapshot,
         words_snapshot,
     )
@@ -917,6 +924,7 @@ def build_scene_timeline(*, project_root: Path) -> SceneTimelineSnapshot:
         plan_snapshot.handoff_snapshot,
         plan_snapshot.manifest_snapshot,
         plan_snapshot.narration_contract_snapshot,
+        *((plan_snapshot.audio_segment_map_snapshot,) if plan_snapshot.audio_segment_map_snapshot is not None else ()),
         narration_snapshot,
         words_snapshot,
         qc_snapshot,

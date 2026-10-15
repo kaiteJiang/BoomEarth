@@ -34,7 +34,7 @@ Astra 直接理解并写稿，默认不调用人话、去 AI 味或 AI 指纹改
 1. 来源任务建立私有 work item；URL、源媒体、逐字稿、分析与 Provider 响应只在 `视频工作台/.internal/洗稿/<work_id>/`。
 2. 完成对应采集/来源转写。Astra 直接写稿；`katerj-script-rewrite` 负责整理、事实/逻辑/来源隔离/全文一致性证据与 source-free 编译，不串旧去 AI 味工具。来源交接只由 compile_source_handoff.py 发布。
 3. 完整加载 `katerj-video-director` 和它的 routing、delivery-gates。写制作计划、场景及素材/运动合同。
-4. `ra-video-illustrations` 与 `katerj-local-tts` 在合同锁定后并行；本地配音只每 30 分钟检查一次并报告进度。完整 WAV/manifest 验证后，`katerj-audio-subtitles` 用精确音频生成词时间，按 `jl-oral-linebreaks` 及项目本地同义规则分句、执行标点展示合同；`katerj-caption-rendering` 渲染单行字幕。已验收阶段直接复用。
+4. `ra-video-illustrations` 与 `katerj-local-tts` 在合同锁定后并行；本地配音默认手动检查；用户明确要求定时跟进时可每 30 分钟检查一次并报告变化，取消后不重建。完整 WAV/manifest 验证后，`katerj-audio-subtitles` 用精确音频生成词时间，按 `jl-oral-linebreaks` 及项目本地同义规则分句、执行标点展示合同；`katerj-caption-rendering` 渲染单行字幕。已验收阶段直接复用。
 5. 按最终音频确定场景/组件 cue，走原 canonical finalizer、逐场景 QC、完整解码、check_delivery 与统一归档。
 6. 已声明视频封面时按 `ra-video-cover` 补齐独立封面/QC。不要把封面当成视频场景素材。
 

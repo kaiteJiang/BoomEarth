@@ -23,13 +23,15 @@ description: Use when a recommended final or canonical pre-publication QC needs 
 
 1. 只从 source-free 交接稿、公开标题候选和最终画面计划提炼主题、受众、情绪、视觉隐喻与禁用元素；不得写入来源 URL、逐字稿、私有路径或私有 ID。
 2. 按 `punk-cover` 读取 cover blueprint 以及 `giant-perspective-chinese-title` 的 `META.md`、`STYLE.md`，先保存完整 prompt 到项目归档内 `punk-assets/punk-cover/<slug>/prompts/cover.md`。
-3. ImageGen 是新的独立外部阶段。每个项目在调用前请求一次精确 ImageGen 批准，绑定 prompt 路径与 SHA-256、不可变计划 SHA-256、work_id、OpenAI runtime-native imagegen、一次调用、可能费用、300 秒超时、零重试、零 fallback、零重定向，并排除 4K、其他 Provider、主页预览和多候选。
+3. ImageGen 是独立外部阶段。先核对本聊天是否已授权本作品的单张封面；已有明确授权直接执行，缺少时才询问。调用前绑定 prompt 路径与 SHA-256、不可变计划 SHA-256、work_id、OpenAI runtime-native imagegen、一次调用、可能费用、300 秒超时、零重试、零 fallback、零重定向，并排除 4K、其他 Provider、主页预览和多候选。
 4. 批准后只调用一次。失败即保留证据并停止；不得自动重试、换 Provider 或生成第二版。
 5. 将本次工具明确返回的原图保存为 `punk-assets/punk-cover/<slug>/cover.png`，不得扫描宽泛生成目录猜测产物。按比例无损适配为 `1080×1440` 后再发布正式封面。
 
 ## 质检与版本
 
 逐字检查所有中文，确认主标题正确可读、透视未破坏字形、主题与视频一致、关键内容在 72px 安全边距内、无 Logo/水印/来源信息/私有信息，并验证 PNG 可完整解码、尺寸为 `1080×1440`。`质检/punk-cover-qc.json` 绑定 prompt、原始生成图和正式封面的 SHA-256，声明 `homepage_preview_generated: false`。
+
+巨型透视字的顶部笔画、实体侧面与副标题均需检查边距；prompt 可预留 120px 以上，不能仅凭 prompt 宣称达标。当前作品的贴边例外需有对应授权，不沿用其他作品的例外。用户明确要求“另生成一张”是新的单张授权，建立递增版本的 prompt、计划和回执后执行，无需重复问同一授权；每个新计划仍是一次调用、零自动重试。
 
 不覆盖旧封面：正式路径已存在时使用下一个 `封面/作品封面-1080x1440-vNN.png`，对应 QC 同步使用版本号。已批准旧图与失败证据全部保留。
 

@@ -487,9 +487,16 @@ def _content_delivery_artifacts(
     )
     if not coverage_ok:
         errors.append("rule=contact-sheet-coverage")
+    audio_map_snapshot = plan_snapshot.audio_segment_map_snapshot
+    if audio_map_snapshot is not None:
+        if not snapshot_matches(audio_map_snapshot):
+            errors.append("rule=content-plan")
+        elif validated_snapshots is not None:
+            validated_snapshots[audio_map_snapshot.path] = audio_map_snapshot
     return (
         plan_path,
         timeline_path,
+        *((audio_map_snapshot.path,) if audio_map_snapshot is not None else ()),
         *provenance_paths,
         *motion_paths,
         *visual_paths,
@@ -1155,7 +1162,7 @@ def _invalidate_old_report(project: Path) -> bool:
         return False
     try:
         if report.exists():
-            report.unlink()
+            report.rename(report.with_name(f"delivery-report.retained-{uuid.uuid4().hex}.json"))
     except OSError:
         return False
     return True

@@ -2,7 +2,7 @@
 
 本页是新对话的最小启动顺序与阶段索引，不是新的渲染架构。当前版本：`sponge-host-handdrawn-v1`，正式流程沿用现有总编排、专业 Skill 和交付脚本。根 AGENTS.md 与已批准项目合同优先。
 
-来源失败自修复、配音期间并行工作与 30 分钟检查、字幕标点的统一规则见 [连续制作编排](VIDEO-CONTINUOUS-ORCHESTRATION.md)。新对话必须与本页一同读取；修复经验从 [来源修复账本](SOURCE-RECOVERY-LEDGER.md) 选最近完整验收的路径。
+来源失败自修复、配音期间并行工作与进度检查、字幕标点的统一规则见 [连续制作编排](VIDEO-CONTINUOUS-ORCHESTRATION.md)。新对话必须与本页一同读取；修复经验从 [来源修复账本](SOURCE-RECOVERY-LEDGER.md) 选最近完整验收的路径。
 
 ## 新对话从这里开始
 
@@ -30,6 +30,8 @@
 - 默认无 HeyGen，不加载默认头像、不登录、不刷新外观组；用户明确启用或旧合同绑定时才走该分支。
 - 视频仍 1920×1080 / 30fps / H.264/AAC。视频作品封面默认沿用已注册 3:4 Punk 合同；文章的 5:2 海绵配图不是视频封面默认值。
 - 历史大画面、JKL、裁角色图集、程序拼四肢方案不是当前生产入口。样片专项 PASS 不代替正式交付检查。
+
+音频分段映射、真实词 cue、正式绘制/MP4 两层检查及仅续归档的操作规则，统一见 [制作可靠性检查](VIDEO-PRODUCTION-RELIABILITY.md)。
 
 ## 阶段与对应 Skill
 
@@ -77,6 +79,7 @@
 | 现有证据 | 下一步 |
 | --- | --- |
 | 正式归档与 delivery PASS | 只读复验并交付链接，不重渲染 |
+| 正式 MP4、必要 QC/实际复核、publication manifest 齐备，仅 receipt/归档失败 | 修复失败原因后执行 `resume_content_archive.py`；不再次 finalize |
 | 最终 WAV + manifest + 字幕六件套/QC 均匹配 | 复用音频字幕，从素材/渲染未完成处继续 |
 | 图片有合规生成证据、哈希与语义 QC | 复用；不因对话切换重新生图 |
 | 只有 PNG 或样片 QC，缺正式生成证据 | 先核查原证据是否可恢复；不补造历史 prepare/complete 回执 |

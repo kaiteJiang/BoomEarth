@@ -13,6 +13,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import uuid
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -453,13 +454,19 @@ def _read_production_caption_metadata(project: ProductionProject) -> tuple[int, 
     return len(captions), word_count
 
 
+def _retain_report(report: Path) -> None:
+    """Move superseded reports beside their source; never erase evidence."""
+    destination = report.with_name(f"{report.stem}.retained-{uuid.uuid4().hex}{report.suffix}")
+    report.rename(destination)
+
+
 def _clear_stale_reports(project: ProductionProject) -> None:
     for report in (project.active_dir / "delivery-report.json", project.delivery_report_path):
         if not report.exists():
             continue
         if not _is_contained(project.active_dir, report) or not _safe_existing_file(report):
             raise RuntimeError("unsafe-delivery-report")
-        report.unlink()
+        _retain_report(report)
 
 
 def _frame_times(duration_seconds: float) -> list[float]:
@@ -756,7 +763,7 @@ def _sanitize_incomplete_stage(
     for relative in (Path("delivery-report.json"), project.delivery_report_path.relative_to(project.active_dir)):
         candidate = stage / relative
         if candidate.exists() and _safe_existing_file(candidate):
-            candidate.unlink()
+            _retain_report(candidate)
 
 
 def initialize_production_project(*, workspace_root: Path, archive_slug: str) -> ProductionProject:
@@ -1042,7 +1049,7 @@ def _finalize_production_sample(
             raise RuntimeError("delivery-report") from None
         if not _valid_delivery_receipt(copied_receipt, publication):
             raise RuntimeError("delivery-report")
-        report.unlink()
+        _retain_report(report)
         if pre_archive_private_inputs_fn is not None:
             pre_archive_private_inputs_fn(project)
         if (

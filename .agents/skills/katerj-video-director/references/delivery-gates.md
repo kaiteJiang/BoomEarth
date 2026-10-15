@@ -11,7 +11,7 @@ Resume by verifying approved script, WAV, subtitle and image hashes from the pro
 Select the highest-evidence state that exists: verified archive, verified project master, completed job without local master, incomplete job, approved generation without job, or no approval.
 
 - A verified archive is read and reported. It is never regenerated for a reporting problem.
-- A verified local master proceeds to the canonical finalizer without a provider call.
+- A verified rendered project with required QC, actual-frame review and a matching publication manifest resumes with `resume_content_archive.py` after fixing the delivery failure. Do not run `finalize` again: it renders again. A master without that evidence first completes the missing checks.
 - A completed job with a missing master needs a new retrieval plan for one status read and one download.
 - An incomplete job needs a separate one-read status plan.
 - Generation approval never authorizes status, retrieval, or download.
@@ -30,13 +30,15 @@ The configured avatar contract uses `headroom_08-circle-lower-left`, `same-group
 
 ## Public receipts
 
-`工程/publication-manifest.json` and terminal `工程/delivery-report.json` contain only approved public hashes and redacted categories. A root delivery report is transient and deleted before archive.
+`工程/publication-manifest.json` and terminal `工程/delivery-report.json` contain only approved public hashes and redacted categories. Superseded root delivery reports are retained under unique names before archive. The validated audio-segment map, when present, must be included in both the publication and delivery hash sets.
 
 ## Visual gate
 
 数字人、字幕、标签和轻量图标都不能代替主题场景素材。每个计划场景必须出现语义对应的真实图片、截图或视频证据；缺少真实主题素材时必须失败。
 
 Hero terms and numeric claims use final word timestamps. Capture cue - 0.1 s, cue, cue + 0.3 s, and cue + 0.7 s frames and reject incomplete text, late images, crop flashes, collisions, or unsettled layouts.
+
+For component-brush projects, follow the [production reliability checks](../../../../docs/VIDEO-PRODUCTION-RELIABILITY.md). Review the actual HTML text-card `data-cue-at` list separately from motion-plan semantic cues, and inspect formal MP4 entry/mid-drawing/completion frames. A process or sample PASS does not replace actual final-frame review.
 
 ## Cover gate
 

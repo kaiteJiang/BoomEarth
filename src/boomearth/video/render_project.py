@@ -23,10 +23,10 @@ from boomearth.video.artifacts import (
     snapshot_matches,
 )
 from boomearth.video.content_plan import ContentPlanError, load_content_plan_snapshot
-from boomearth.video.scene_timeline import SceneTimelineError, validate_scene_timeline
+from boomearth.video.scene_timeline import SceneTimelineError, _load_words, validate_scene_timeline
 from boomearth.video.comic_semantic_parts import validate_comic_semantic_parts
 from boomearth.video.sponge_components import (
-    SpongeComponentError, resolve_cue_start, validate_drawing_plan,
+    SpongeComponentError, SpongeCueReviewRequired, load_reviewed_cue_captions, resolve_cue_start, validate_drawing_plan,
 )
 from boomearth.video.motion_plan import (
     MotionEntry,
@@ -773,7 +773,7 @@ def _publish_directory_no_replace(stage: Path, target: Path) -> None:
 
 
 def _sponge_text_layers(
-    snapshot: FileSnapshot | None, plan, timeline, captions: tuple[dict[str, object], ...]
+    snapshot: FileSnapshot | None, plan, timeline, captions: tuple[dict[str, object], ...], *, words, load_cue_reviews=None
 ) -> dict[str, dict[str, object]]:
     if snapshot is None:
         return {}
@@ -809,6 +809,7 @@ def _sponge_text_layers(
         own_cues = [cue for cue in captions if timing.start - .001 <= float(cue["start"]) < timing.end - .001]
         own = [str(cue["text"]) for cue in own_cues]
         previous_at = -1.0
+        reviewed_captions = frozenset()
         for card in cards:
             if not isinstance(card, dict) or set(card) != {"title", "detail", "cue"}:
                 raise ContentRenderProjectError("sponge text layer is invalid")
@@ -816,7 +817,15 @@ def _sponge_text_layers(
                 raise ContentRenderProjectError("sponge text layer is invalid")
             if enhanced:
                 try:
-                    card["cue_at"] = resolve_cue_start(card["cue"], own_cues, after=previous_at)
+                    try:
+                        card["cue_at"] = resolve_cue_start(card["cue"], own_cues, after=previous_at, words=words, reviewed_captions=reviewed_captions)
+                    except SpongeCueReviewRequired:
+                        if load_cue_reviews is None:
+                            raise
+                        reviewed_captions = load_cue_reviews()
+                        card["cue_at"] = resolve_cue_start(card["cue"], own_cues, after=previous_at, words=words, reviewed_captions=reviewed_captions)
+                    if not timing.start <= card["cue_at"] < timing.end:
+                        raise SpongeComponentError("sponge text cue is outside its scene")
                 except SpongeComponentError:
                     raise ContentRenderProjectError("sponge text cue has no complete speech match") from None
                 previous_at = card["cue_at"]
@@ -1023,8 +1032,21 @@ def prepare_content_render_project(
         captions_snapshot=caption_snapshots["captions.json"],
         captions=captions,
     )
+    cue_review_snapshots = []
+    cue_reviewed_captions = None
+    cue_words = _load_words(caption_snapshots["captions_words.json"], duration=timeline.duration_seconds)
+    def load_cue_reviews():
+        nonlocal cue_reviewed_captions
+        if cue_reviewed_captions is None:
+            cue_reviewed_captions, captured = load_reviewed_cue_captions(
+                root, caption_snapshots=caption_snapshots, narration_sha256=narration.sha256,
+                captions=captions, words=cue_words,
+            )
+            cue_review_snapshots.extend(captured)
+        return cue_reviewed_captions
     sponge_text_layers = _sponge_text_layers(
-        text_layer_snapshot, plan_snapshot.plan, timeline, captions
+        text_layer_snapshot, plan_snapshot.plan, timeline, captions,
+        words=cue_words, load_cue_reviews=load_cue_reviews,
     )
     sponge_host_regions = _sponge_host_regions(host_regions_snapshot, plan_snapshot.plan)
     if sponge_drawing_plans and set(sponge_text_layers) != set(sponge_drawing_plans):
@@ -1047,6 +1069,7 @@ def prepare_content_render_project(
         plan_snapshot.handoff_snapshot,
         plan_snapshot.manifest_snapshot,
         plan_snapshot.narration_contract_snapshot,
+        *((plan_snapshot.audio_segment_map_snapshot,) if plan_snapshot.audio_segment_map_snapshot is not None else ()),
         *((motion_snapshot.snapshot,) if motion_snapshot is not None else ()),
         *((
             illustration_snapshot.snapshot,
@@ -1059,6 +1082,7 @@ def prepare_content_render_project(
         narration,
         manifest,
         *caption_snapshots.values(),
+        *cue_review_snapshots,
         *((emphasis_snapshot,) if emphasis_snapshot is not None else ()),
         *((text_layer_snapshot,) if text_layer_snapshot is not None else ()),
         *((host_regions_snapshot,) if host_regions_snapshot is not None else ()),
@@ -1172,6 +1196,8 @@ def prepare_content_render_project(
         (stage / "media" / "voice_manifest.json").write_bytes(manifest.payload)
         for name, snapshot in caption_snapshots.items():
             (stage / "media" / "captions" / name).write_bytes(snapshot.payload)
+        for snapshot in cue_review_snapshots:
+            (stage / snapshot.path.name).write_bytes(snapshot.payload)
         if emphasis_snapshot is not None:
             (stage / "caption-emphasis.json").write_bytes(emphasis_snapshot.payload)
         if text_layer_snapshot is not None:

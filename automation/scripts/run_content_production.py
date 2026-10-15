@@ -115,6 +115,7 @@ def _content_contract(project: ProductionProject):
             )
     protected = (
         plan_snapshot.path,
+        *((plan_snapshot.audio_segment_map_snapshot.path,) if plan_snapshot.audio_segment_map_snapshot is not None else ()),
         timeline_path,
         *((motion_snapshot.path,) if motion_snapshot is not None else ()),
         *assets,
